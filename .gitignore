@@ -1,0 +1,12 @@
+# Conan
+conaninfo.txt
+conanbuildinfo.txt
+conanbuildinfo.cmake
+
+# CMake
+CMakeSettings.json
+
+# Visual studio
+graph_info.json
+out
+.vs

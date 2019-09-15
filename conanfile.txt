@@ -1,0 +1,10 @@
+[requires]
+stb/20190512@conan/stable
+glm/0.9.9.4@g-truc/stable
+zlib/1.2.11@conan/stable
+Assimp/4.1.0@jacmoe/stable
+glew/2.1.0@bincrafters/stable
+glfw/3.3@bincrafters/stable
+
+[generators]
+cmake
