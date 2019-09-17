@@ -13,6 +13,10 @@ file(COPY ${RESOURCES} DESTINATION "${CMAKE_BINARY_DIR}/bin/resources")
 add_executable (
 	mdmc
 	"src/Main.cpp"
+	
+	"src/Camera.hpp"
+	"src/Camera.cpp"
+
 	#"src/voxelizer.hpp"
 	#"src/voxelizer.cpp"
 	
@@ -24,6 +28,7 @@ add_executable (
 	"src/Phases/VisualizeScenePhase.hpp"
 	"src/Phases/VisualizeScenePhase.cpp"
 	
+	"src/Scene/Shader.hpp"
 	"src/Scene/Material.hpp"
 	"src/Scene/Material.cpp"
 	"src/Scene/Mesh.hpp"

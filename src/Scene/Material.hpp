@@ -1,6 +1,7 @@
 #pragma once
 
 #include <GL/glew.h>
+
 #include <assimp/scene.h>
 
 class Material

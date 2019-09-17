@@ -1,20 +1,17 @@
 #pragma once
 
-#include "PhaseManager.hpp"
+#include <GL/glew.h>
+#include <GLFW/glfw3.h>
 
 #include <memory>
 
+class PhaseManager;
+
 class Phase
 {
-protected:
-	std::shared_ptr<PhaseManager> phaseManager;
-
 public:
-	Phase(PhaseManager* phaseManager) : phaseManager(phaseManager) {};
-
-	virtual void onEnable() {};
-	virtual void onDisable() {};
-
-	virtual void onUpdate(float delta) {};
-	virtual void onRender() {};
+	virtual void onEnable(PhaseManager* phaseManager) {};
+	virtual void onDisable(PhaseManager* phaseManager) {};
+	virtual void onUpdate(PhaseManager* phaseManager, float delta) {};
+	virtual void onRender(PhaseManager* phaseManager) {};
 };

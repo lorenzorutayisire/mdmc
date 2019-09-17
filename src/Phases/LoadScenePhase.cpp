@@ -2,19 +2,20 @@
 #include "VisualizeScenePhase.hpp"
 
 #include <GL/glew.h>
+
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 
 #include <iostream>
 
-LoadScenePhase::LoadScenePhase(PhaseManager* phaseManager, const char* path) : Phase(phaseManager), path(path)
+LoadScenePhase::LoadScenePhase(const char* path) : path(path)
 {
 }
 
-void LoadScenePhase::onEnable()
+void LoadScenePhase::onEnable(PhaseManager* phaseManager)
 {
 	std::cout << "========================================" << std::endl;
-	std::cout << "LoadScenePhase" << std::endl;
+	std::cout << "LoadScenePhase | onEnable" << std::endl;
 	std::cout << "========================================" << std::endl;
 
 	Assimp::Importer importer;
@@ -29,10 +30,10 @@ void LoadScenePhase::onEnable()
 
 	Scene* scene = new Scene();
 	scene->loadAiScene(aiScene);
-	phaseManager->setPhase(new VisualizeScenePhase(phaseManager.get(), scene));
+	phaseManager->setPhase(new VisualizeScenePhase(scene));
 }
 
-void LoadScenePhase::onRender()
+void LoadScenePhase::onRender(PhaseManager* phaseManager)
 {
 	glClearColor(1.0f, 0.0f, 0.0f, 0.0f);
 }

@@ -30,7 +30,7 @@ void Scene::loadAiScene(const aiScene *aiScene)
 		mesh.loadAiMesh(aiMesh);
 		if (aiMesh->mMaterialIndex > 0 && aiMesh->mMaterialIndex < this->meshes.size())
 		{
-			mesh.setMaterial(&this->materials[i]);
+			mesh.setMaterial(&this->materials[aiMesh->mMaterialIndex]);
 		}
 		this->meshes.push_back(std::move(mesh));
 	}

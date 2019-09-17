@@ -78,6 +78,7 @@ void Mesh::render()
 	this->material->bind();
 
 	glBindVertexArray(this->vao);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->ebo);
 
 	glDrawElements(GL_TRIANGLES, this->elementsCount, GL_UNSIGNED_INT, NULL);
 }

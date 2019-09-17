@@ -1,11 +1,14 @@
-#include "Phases/PhaseManager.hpp"
-#include "Phases/LoadScenePhase.hpp"
+
+#include <GL/glew.h>
+
+#include <GLFW/glfw3.h>
 
 #include <stdexcept>
 #include <iostream>
 
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
+#include "Phases/PhaseManager.hpp"
+#include "Phases/LoadScenePhase.hpp"
+
 
 int main()
 {
@@ -29,7 +32,7 @@ int main()
 
 	glfwShowWindow(window);
 
-	PhaseManager phaseManager;
+	PhaseManager phaseManager(window);
 
 	phaseManager.setPhase(new LoadScenePhase("resources/skull/12140_Skull_v3_L2.obj"));
 
@@ -40,6 +43,12 @@ int main()
 
 		phaseManager.onUpdate(1.0f);
 		phaseManager.onRender();
+
+		// Closes the window when ESCAPE key is pressed.
+		if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+		{
+			glfwSetWindowShouldClose(window, GLFW_TRUE);
+		}
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();

@@ -10,9 +10,9 @@ private:
 	std::string path;
 
 public:
-	LoadScenePhase(PhaseManager* phaseManager, const char* path);
+	LoadScenePhase(const char* path);
 
-	void onEnable();
+	void onEnable(PhaseManager* phaseManager);
 
-	void onRender();
+	void onRender(PhaseManager* phaseManager);
 };
