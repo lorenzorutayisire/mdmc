@@ -22,5 +22,7 @@ public:
 			std::cerr << log << std::endl;
 			throw;
 		}
+
+		std::cout << "Shader compiled." << std::endl;
 	}
 };

@@ -1,5 +1,6 @@
 #include "LoadScenePhase.hpp"
 #include "VisualizeScenePhase.hpp"
+#include "../Scene/Scene.hpp"
 
 #include <GL/glew.h>
 
@@ -18,18 +19,12 @@ void LoadScenePhase::onEnable(PhaseManager* phaseManager)
 	std::cout << "LoadScenePhase | onEnable" << std::endl;
 	std::cout << "========================================" << std::endl;
 
-	Assimp::Importer importer;
-
-	const aiScene* aiScene = importer.ReadFile(this->path.c_str(), aiProcess_Triangulate);
-	if (aiScene == NULL) {
-		std::cerr << "Scene could not be loaded: " << importer.GetErrorString() << std::endl;
-		throw; // aiScene could not be loaded. Check the file path.
-	}
 
 	// The scene will be cleaned up by the importer destructor.
 
 	Scene* scene = new Scene();
-	scene->loadAiScene(aiScene);
+	scene->load(this->path);
+
 	phaseManager->setPhase(new VisualizeScenePhase(scene));
 }
 

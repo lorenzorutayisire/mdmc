@@ -29,8 +29,8 @@ Camera::Camera() :
 	_horizontalAngle(0.0f),
 	_verticalAngle(0.0f),
 	_fieldOfView(50.0f),
-	_nearPlane(0.01f),
-	_farPlane(100.0f),
+	_nearPlane(0.0001f),
+	_farPlane(100000.0f),
 	_viewportAspectRatio(4.0f / 3.0f)
 {
 }
@@ -72,7 +72,7 @@ void Camera::setNearAndFarPlanes(float nearPlane, float farPlane) {
 }
 
 glm::mat4 Camera::orientation() const {
-	glm::mat4 orientation;
+	glm::mat4 orientation = glm::mat4(1.0f);
 	orientation = glm::rotate(orientation, glm::radians(_verticalAngle), glm::vec3(1, 0, 0));
 	orientation = glm::rotate(orientation, glm::radians(_horizontalAngle), glm::vec3(0, 1, 0));
 	return orientation;
@@ -117,15 +117,18 @@ glm::vec3 Camera::up() const {
 }
 
 glm::mat4 Camera::matrix() const {
-	return projection() * view();
+	glm::mat4 matrix = projection() * view();
+	return matrix;
 }
 
 glm::mat4 Camera::projection() const {
-	return glm::perspective(glm::radians(_fieldOfView), _viewportAspectRatio, _nearPlane, _farPlane);
+	glm::mat4 projection = glm::perspective(glm::radians(_fieldOfView), _viewportAspectRatio, _nearPlane, _farPlane);
+	return projection;
 }
 
 glm::mat4 Camera::view() const {
-	return orientation() * glm::translate(glm::mat4(), -_position);
+	glm::mat4 view = orientation() * glm::translate(glm::mat4(1.0f), -_position);
+	return view;
 }
 
 void Camera::normalizeAngles() {

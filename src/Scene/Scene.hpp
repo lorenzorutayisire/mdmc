@@ -1,22 +1,24 @@
 #pragma once
 
-#include "Material.hpp"
 #include "Mesh.hpp"
 
-#include <assimp/scene.h>
 #include <vector>
+#include <string>
+
+#include <assimp/scene.h>
 
 class Scene
 {
 private:
-	std::vector<Material> materials;
 	std::vector<Mesh> meshes;
 
 public:
 	Scene();
 	~Scene();
 
-	void loadAiScene(const aiScene* aiScene);
+	void load(const std::string path);
 
 	void render();
+
+	void destroy();
 };

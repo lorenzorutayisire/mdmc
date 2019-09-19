@@ -1,8 +1,9 @@
 #pragma once
 
 #include <GL/glew.h>
-
 #include <assimp/scene.h>
+
+#include <string>
 
 class Material
 {
@@ -14,7 +15,7 @@ public:
 	Material();
 	~Material();
 
-	void loadAiMaterial(aiMaterial* aiMaterial);
+	void loadAiMaterial(std::string loadingPath, aiMaterial* aiMaterial);
 
 	void bind();
 };

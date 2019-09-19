@@ -1,6 +1,10 @@
 #include "Scene.hpp"
 
 #include <utility>
+#include <iostream>
+
+#include <assimp/Importer.hpp>
+#include <assimp/postprocess.h>
 
 Scene::Scene()
 {
@@ -8,30 +12,28 @@ Scene::Scene()
 
 Scene::~Scene()
 {
-	this->meshes.clear();
 }
 
-void Scene::loadAiScene(const aiScene *aiScene)
+void Scene::load(const std::string path)
 {
-	// Materials
-	for (uint32_t i = 0; i < aiScene->mNumMaterials; i++)
-	{
-		Material material;
-		material.loadAiMaterial(aiScene->mMaterials[i]);
-		this->materials.push_back(std::move(material));
+	Assimp::Importer importer;
+
+	const aiScene* ai_scene = importer.ReadFile(path.c_str(), aiProcess_Triangulate);
+	if (ai_scene == NULL) {
+		std::cerr << "Scene loading issue: " << importer.GetErrorString() << std::endl;
+		throw;
 	}
 
-	// Meshes
-	for (uint32_t i = 0; i < aiScene->mNumMeshes; i++)
-	{
-		aiMesh* aiMesh = aiScene->mMeshes[i];
+	Mesh mesh;
+	std::string folder = path.substr(0, path.find_last_of("/\\"));
 
-		Mesh mesh;
-		mesh.loadAiMesh(aiMesh);
-		if (aiMesh->mMaterialIndex > 0 && aiMesh->mMaterialIndex < this->meshes.size())
-		{
-			mesh.setMaterial(&this->materials[aiMesh->mMaterialIndex]);
-		}
+	for (uint32_t i = 0; i < ai_scene->mNumMeshes; i++)
+	{
+		aiMesh* ai_mesh = ai_scene->mMeshes[i];
+		aiMaterial* ai_material = ai_scene->mMaterials[ai_mesh->mMaterialIndex];
+
+		mesh.load(folder, ai_mesh, ai_material);
+
 		this->meshes.push_back(std::move(mesh));
 	}
 }
@@ -42,4 +44,13 @@ void Scene::render()
 	{
 		mesh.render();
 	}
+}
+
+void Scene::destroy()
+{
+	for (Mesh mesh : this->meshes)
+	{
+		mesh.destroy();
+	}
+	this->meshes.clear();
 }
