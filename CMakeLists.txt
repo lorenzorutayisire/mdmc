@@ -29,8 +29,6 @@ add_executable (
 	"src/Phases/VisualizeScenePhase.cpp"
 	
 	"src/Scene/Shader.hpp"
-	#"src/Scene/Material.hpp"
-	#"src/Scene/Material.cpp"
 	"src/Scene/Mesh.hpp"
 	"src/Scene/Mesh.cpp"
 	"src/Scene/Scene.hpp"
