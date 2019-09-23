@@ -16,9 +16,6 @@ add_executable (
 	
 	"src/Camera.hpp"
 	"src/Camera.cpp"
-
-	#"src/voxelizer.hpp"
-	#"src/voxelizer.cpp"
 	
 	"src/Phases/Phase.hpp"
 	"src/Phases/PhaseManager.hpp"
