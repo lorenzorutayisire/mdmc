@@ -81,16 +81,26 @@ void Mesh::load_vbo(aiMesh* ai_mesh)
 	std::vector<GLfloat> vertices;
 	for (uint32_t i = 0; i < ai_mesh->mNumVertices; i++)
 	{
-		aiVector3D vertex = ai_mesh->mVertices[i];
-		vertices.push_back(vertex.x);
-		vertices.push_back(vertex.y);
-		vertices.push_back(vertex.z);
+		aiVector3D vector3d;
 
+		// Position
+		vector3d = ai_mesh->mVertices[i];
+		vertices.push_back(vector3d.x);
+		vertices.push_back(vector3d.y);
+		vertices.push_back(vector3d.z);
+
+		// Normals
+		vector3d = ai_mesh->mNormals[i];
+		vertices.push_back(vector3d.x);
+		vertices.push_back(vector3d.y);
+		vertices.push_back(vector3d.z);
+
+		// TexCoords
 		if (ai_mesh->HasTextureCoords(0))
 		{
-			aiVector3D* texCoords = ai_mesh->mTextureCoords[0];
-			vertices.push_back(texCoords[i].x);
-			vertices.push_back(1.0f - texCoords[i].y);
+			vector3d = ai_mesh->mTextureCoords[0][i];
+			vertices.push_back(vector3d.x);
+			vertices.push_back(1.0f - vector3d.y);
 		}
 		else
 		{
@@ -136,10 +146,13 @@ void Mesh::load_mesh(aiMesh* ai_mesh)
 	this->load_ebo(ai_mesh);
 
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), 0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), 0);
 
 	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
+
+	glEnableVertexAttribArray(2);
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (void*)((3 + 3) * sizeof(GLfloat)));
 
 	glBindVertexArray(0);
 }

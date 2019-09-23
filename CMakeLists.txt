@@ -17,6 +17,15 @@ add_executable (
 	"src/Camera.hpp"
 	"src/Camera.cpp"
 	
+	"src/Program.hpp"
+	"src/Program.cpp"
+
+	"src/Shader.hpp"
+	"src/Shader.cpp"
+
+	"src/Voxelizer.hpp"
+	"src/Voxelizer.cpp"
+
 	"src/Phases/Phase.hpp"
 	"src/Phases/PhaseManager.hpp"
 	"src/Phases/PhaseManager.cpp"
@@ -24,8 +33,9 @@ add_executable (
 	"src/Phases/LoadScenePhase.cpp"
 	"src/Phases/VisualizeScenePhase.hpp"
 	"src/Phases/VisualizeScenePhase.cpp"
-	
-	"src/Scene/Shader.hpp"
+	"src/Phases/VoxelizeScenePhase.hpp"
+	"src/Phases/VoxelizeScenePhase.cpp"
+
 	"src/Scene/Mesh.hpp"
 	"src/Scene/Mesh.cpp"
 	"src/Scene/Scene.hpp"

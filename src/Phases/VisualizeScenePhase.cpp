@@ -1,11 +1,11 @@
 #include "VisualizeScenePhase.hpp"
 
-#include "../Scene/Shader.hpp"
-
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
 #include <iostream>
+
+#include "VoxelizeScenePhase.hpp"
 
 const GLchar* VISUALIZE_VERTEX_SHADER = R"glsl(
 	#version 450
@@ -149,6 +149,13 @@ void VisualizeScenePhase::onUpdate(PhaseManager* phaseManager, float delta)
 
 	if (glfwGetInputMode(window, GLFW_CURSOR) != GLFW_CURSOR_DISABLED)
 	{
+		return;
+	}
+
+	/* Voxelize */
+	if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS)
+	{
+		phaseManager->setPhase(new VoxelizeScenePhase(this->scene.get()));
 		return;
 	}
 

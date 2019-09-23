@@ -16,6 +16,8 @@ public:
 	Scene();
 	~Scene();
 
+	std::vector<Mesh>& get_meshes();
+
 	void load(const std::string path);
 
 	void render();

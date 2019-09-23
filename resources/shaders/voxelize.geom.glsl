@@ -6,7 +6,7 @@
 //Geometry shader for scene voxelization
 //Using the method described in Ch. 22, OpenGL Insights
 
-# version 430
+#version 430
 
 layout ( triangles ) in;
 layout ( triangle_strip, max_vertices = 3 ) out;
@@ -15,12 +15,11 @@ in vec3 v_vertex[];
 in vec3 v_normal[];
 in vec2 v_texcoord[];
 
-out vec3 f_normal;
-out vec3 f_pos;
-out vec2 f_texcoord;
+out vec3 f_position;
+out vec2 f_texcoords;
 
 flat out int f_axis;   //indicate which axis the projection uses
-flat out vec4 f_AABB;
+flat out vec4 f_aabb;
 
 uniform mat4 u_MVPx;
 uniform mat4 u_MVPy;
@@ -79,7 +78,7 @@ void main()
 	AABB.xy -= hPixel;
 	AABB.zw += hPixel;
 
-	f_AABB =AABB;
+	f_aabb =AABB;
 
 	//find 3 triangle edge plane
     vec3 e0 = vec3( pos[1].xy - pos[0].xy, 0 );
@@ -96,23 +95,20 @@ void main()
 
     //gl_Position = proj * gl_in[0].gl_Position;
 	gl_Position = pos[0];
-	f_pos = pos[0].xyz;
-	f_normal = v_normal[0];
-	f_texcoord = v_texcoord[0];
+	f_position = pos[0].xyz;
+	f_texcoords = v_texcoord[0];
 	EmitVertex();
 
 	//gl_Position = proj * gl_in[1].gl_Position;
 	gl_Position = pos[1];
-	f_pos = pos[1].xyz;
-	f_normal = v_normal[1];
-	f_texcoord = v_texcoord[1];
+	f_position = pos[1].xyz;
+	f_texcoords = v_texcoord[1];
 	EmitVertex();
 
 	//gl_Position = proj * gl_in[2].gl_Position;
 	gl_Position = pos[2];
-	f_pos = pos[2].xyz;
-	f_normal = v_normal[2];
-	f_texcoord = v_texcoord[2];
+	f_position = pos[2].xyz;
+	f_texcoords = v_texcoord[2];
 	EmitVertex();
 
 	EndPrimitive();

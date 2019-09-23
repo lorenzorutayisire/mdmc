@@ -14,6 +14,11 @@ Scene::~Scene()
 {
 }
 
+std::vector<Mesh>& Scene::get_meshes()
+{
+	return this->meshes;
+}
+
 void Scene::load(const std::string path)
 {
 	Assimp::Importer importer;
