@@ -19,5 +19,5 @@ public:
 	void source_from_file(const GLchar* path);
 
 	bool compile();
-	std::string&& get_compile_log();
+	std::string get_log();
 };

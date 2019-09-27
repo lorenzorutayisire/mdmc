@@ -1,25 +1,18 @@
-// Sparse Voxel Octree and Voxel Cone Tracing
-// 
-// University of Pennsylvania CIS565 final project
-// copyright (c) 2013 Cheng-Tso Lin  
-
-//Vertex shader for scene voxelization
-//Using the method described in Ch. 22, OpenGL Insights
-
 #version 430
 
-layout (location = 0) in vec3 Position;
-layout (location = 1) in vec3 Normal;
-layout (location = 2) in vec2 texcoord;
+layout (location = 0) in vec3 position;
+layout (location = 1) in vec3 normal;
+layout (location = 2) in vec2 tex_coords;
 
-out vec3 v_vertex;
-out vec3 v_normal;
-out vec2 v_texcoord;
+uniform mat4 u_transform;
+uniform mat4 u_camera;
+
+out vec3 v_position;
+out vec2 v_tex_coords;
 
 void main()
 {
-    v_vertex = Position;
-	v_normal = Normal;
-	v_texcoord = texcoord;
-    gl_Position = vec4( Position, 1 );
+    gl_Position = u_camera * u_transform * vec4(position, 1);
+	v_position = gl_Position.xyz;
+	v_tex_coords = tex_coords;
 }

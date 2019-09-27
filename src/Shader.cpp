@@ -2,6 +2,9 @@
 
 #include <fstream>
 #include <string>
+#include <vector>
+
+#include <iostream>
 
 Shader::Shader(GLenum type)
 {
@@ -25,8 +28,15 @@ void Shader::source_from_string(const GLchar* source)
 
 void Shader::source_from_file(const GLchar* path)
 {
-	std::ifstream in(path);
-	std::string string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+	std::ifstream file(path);
+	
+	if (errno)
+	{
+		std::cerr << strerror(errno) << std::endl;
+		throw;
+	}
+
+	std::string string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 
 	this->source_from_string(string.c_str());
 }
@@ -37,12 +47,16 @@ bool Shader::compile()
 
 	GLint status;
 	glGetShaderiv(this->id, GL_COMPILE_STATUS, &status);
-	return status == GL_FALSE;
+	return status == GL_TRUE;
 }
 
-std::string&& Shader::get_compile_log()
+std::string Shader::get_log()
 {
-	std::string log;
-	glGetShaderInfoLog(this->id, 2048, NULL, &log[0]);
-	return std::move(log);
+	GLint log_length = 0;
+	glGetShaderiv(this->id, GL_INFO_LOG_LENGTH, &log_length);
+
+	std::vector<GLchar> log(log_length);
+	glGetShaderInfoLog(this->id, log_length, NULL, log.data());
+
+	return std::string(log.begin(), log.end());
 }

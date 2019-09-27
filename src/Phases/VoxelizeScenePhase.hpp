@@ -1,5 +1,6 @@
 #pragma once
 
+#include "PhaseManager.hpp"
 #include "Phase.hpp"
 
 #include "../Scene/Scene.hpp"

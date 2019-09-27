@@ -10,11 +10,10 @@ Mesh::Mesh() :
 	vao(NULL),
 	vbo(NULL),
 	ebo(NULL),
+	elements_count(0),
 
 	texture(NULL),
-	color(aiColor4D(0)),
-
-	elements_count(0)
+	color(aiColor4D(0))
 {
 }
 
@@ -76,8 +75,25 @@ void inline Mesh::load_material(const std::string folder, aiMaterial* ai_materia
 	this->load_color(ai_material);
 }
 
+void Mesh::test_min_vertex(aiVector3D vertex)
+{
+	this->min_vertex.x = (this->min_vertex.x < vertex.x) ? this->min_vertex.x : vertex.x;
+	this->min_vertex.y = (this->min_vertex.y < vertex.y) ? this->min_vertex.y : vertex.y;
+	this->min_vertex.z = (this->min_vertex.z < vertex.z) ? this->min_vertex.z : vertex.z;
+}
+
+void Mesh::test_max_vertex(aiVector3D vertex)
+{
+	this->max_vertex.x = (this->max_vertex.x > vertex.x) ? this->max_vertex.x : vertex.x;
+	this->max_vertex.y = (this->max_vertex.y > vertex.y) ? this->max_vertex.y : vertex.y;
+	this->max_vertex.z = (this->max_vertex.z > vertex.z) ? this->max_vertex.z : vertex.z;
+}
+
 void Mesh::load_vbo(aiMesh* ai_mesh)
 {
+	this->min_vertex = glm::vec3(0, 0, 0);
+	this->max_vertex = glm::vec3(0, 0, 0);
+
 	std::vector<GLfloat> vertices;
 	for (uint32_t i = 0; i < ai_mesh->mNumVertices; i++)
 	{
@@ -88,6 +104,9 @@ void Mesh::load_vbo(aiMesh* ai_mesh)
 		vertices.push_back(vector3d.x);
 		vertices.push_back(vector3d.y);
 		vertices.push_back(vector3d.z);
+
+		this->test_min_vertex(vector3d);
+		this->test_max_vertex(vector3d);
 
 		// Normals
 		vector3d = ai_mesh->mNormals[i];
@@ -112,6 +131,8 @@ void Mesh::load_vbo(aiMesh* ai_mesh)
 	glGenBuffers(1, &this->vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
 	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(GLfloat), &vertices[0], GL_STATIC_DRAW);
+
+	std::cout << "Vertices: " << vertices.size() << std::endl;
 }
 
 void Mesh::load_ebo(aiMesh* ai_mesh)
@@ -135,6 +156,8 @@ void Mesh::load_ebo(aiMesh* ai_mesh)
 	glGenBuffers(1, &this->ebo);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->ebo);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(GLuint), &indices[0], GL_STATIC_DRAW);
+
+	std::cout << "Elements: " << this->elements_count << std::endl;
 }
 
 void Mesh::load_mesh(aiMesh* ai_mesh)
@@ -165,6 +188,7 @@ void Mesh::load(std::string folder, aiMesh* ai_mesh, aiMaterial* ai_material)
 
 void Mesh::render()
 {
+	glActiveTexture(GL_TEXTURE0); // Binding 0
 	glBindTexture(GL_TEXTURE_2D, this->texture);
 
 	glUniform4f(2, this->color.r, this->color.g, this->color.b, this->color.a);
