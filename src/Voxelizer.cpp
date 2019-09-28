@@ -8,27 +8,8 @@
 
 #include <iostream>
 
-Voxelizer::Voxelizer(uint16_t width, uint16_t height, uint16_t depth) :
-	width(width),
-	height(height),
-	depth(depth),
-	size(width * height * depth)
+Voxelizer::Voxelizer()
 {
-	GLenum error;
-
-	// Texture3D
-	glGenTextures(1, &voxel);
-	glBindTexture(GL_TEXTURE_3D, voxel);
-
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-	glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA32F, this->width, this->height, this->depth, 0, GL_RGBA, GL_FLOAT, NULL);
-
 	/* Program */
 
 	// Vertex
@@ -63,15 +44,33 @@ Voxelizer::~Voxelizer()
 {
 }
 
-void Voxelizer::voxelize(Scene& scene)
+void Voxelizer::voxelize(GLFWwindow* window, Scene& scene, uint16_t height)
 {
+	float scalar = 1 / scene.get_size().y;
+	uint16_t width = scalar * scene.get_size().x * height;
+	uint16_t depth = scalar * scene.get_size().z * height;
+
+	// Texture3D
+	glGenTextures(1, &voxel);
+	glBindTexture(GL_TEXTURE_3D, voxel);
+
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+	glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA32F, width, height, depth, 0, GL_RGBA, GL_FLOAT, NULL);
+
+	glEnable(GL_TEXTURE_3D);
+
 	glDisable(GL_CULL_FACE);
 	glDisable(GL_DEPTH_TEST);
 	// glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 
-	glEnable(GL_TEXTURE_3D);
-
-	glViewport(0, 0, this->width, this->height);
+	glfwSetWindowSize(window, width, height);
+	glViewport(0, 0, width, height);
 	
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glClearColor(0, 0, 0, 0);
@@ -82,7 +81,7 @@ void Voxelizer::voxelize(Scene& scene)
 
 	// Transform
 	glm::mat4 transform = glm::mat4(1.0);
-	transform = glm::scale(transform, glm::vec3(1) / (scene.get_max_vertex() - scene.get_min_vertex()));
+	transform = glm::scale(transform, glm::vec3(scalar));
 	transform = glm::translate(transform, -scene.get_min_vertex());
 	glUniformMatrix4fv(this->program.get_uniform_location("u_transform"), 1, GL_FALSE, glm::value_ptr(transform));
 
@@ -92,7 +91,7 @@ void Voxelizer::voxelize(Scene& scene)
 	glUniformMatrix4fv(this->program.get_uniform_location("u_camera"), 1, GL_FALSE, glm::value_ptr(camera));
 
 	// Voxel Size
-	glUniform3i(this->program.get_uniform_location("u_voxel_size"), this->width, this->height, this->depth);
+	glUniform3i(this->program.get_uniform_location("u_voxel_size"), width, height, depth);
 
 	// Voxel
 	glActiveTexture(GL_TEXTURE5);

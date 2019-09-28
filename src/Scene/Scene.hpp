@@ -29,6 +29,7 @@ public:
 
 	glm::vec3 get_min_vertex() { return this->min_vertex; }
 	glm::vec3 get_max_vertex() { return this->max_vertex; }
+	glm::vec3 get_size() { return this->max_vertex - this->min_vertex;  }
 
 	void load(const std::string path);
 

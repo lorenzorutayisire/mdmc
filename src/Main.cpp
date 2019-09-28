@@ -45,7 +45,7 @@ int main()
 
 	PhaseManager phaseManager(window);
 
-	phaseManager.setPhase(new LoadScenePhase("resources/buildings/building.obj"));
+	phaseManager.setPhase(new LoadScenePhase("resources/skull/12140_Skull_v3_L2.obj"));
 
 	while (!glfwWindowShouldClose(window))
 	{
