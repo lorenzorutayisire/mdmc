@@ -6,7 +6,7 @@ in vec2 v_tex_coords;
 uniform vec4 u_color;
 layout(binding = 0) uniform sampler2D u_texture2d;
 
-layout(binding = 1, rgba8) uniform image3D u_voxel;
+layout(location = 5, binding = 5, rgba32f) uniform image3D u_voxel;
 layout(location = 2) uniform ivec3 u_voxel_size;
 
 void main()
@@ -15,6 +15,5 @@ void main()
 	vec4 color = u_color * texture(u_texture2d, v_tex_coords);
 
 	imageStore(u_voxel, position, color);
-
 	gl_FragColor = color;
 }

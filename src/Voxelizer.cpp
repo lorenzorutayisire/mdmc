@@ -1,5 +1,7 @@
 #include "Voxelizer.hpp"
 
+#include <GLFW/glfw3.h>
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -17,15 +19,15 @@ Voxelizer::Voxelizer(uint16_t width, uint16_t height, uint16_t depth) :
 	// Texture3D
 	glGenTextures(1, &voxel);
 	glBindTexture(GL_TEXTURE_3D, voxel);
-	glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA8, this->width, this->height, this->depth, 0, GL_RGBA, GL_FLOAT, NULL);
-	glClearTexImage(voxel, 0, GL_RGBA8, GL_FLOAT, new float[4]{ 0, 0, 0, 0 });
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+	glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA32F, this->width, this->height, this->depth, 0, GL_RGBA, GL_FLOAT, NULL);
 
 	/* Program */
 
@@ -63,12 +65,18 @@ Voxelizer::~Voxelizer()
 
 void Voxelizer::voxelize(Scene& scene)
 {
-	glViewport(0, 0, this->width, this->height);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 	glDisable(GL_CULL_FACE);
 	glDisable(GL_DEPTH_TEST);
 	// glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+
+	glEnable(GL_TEXTURE_3D);
+
+	glViewport(0, 0, this->width, this->height);
+	
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glClearColor(0, 0, 0, 0);
+
+	glClearTexImage(voxel, 0, GL_RGBA, GL_FLOAT, new float[4]{ 0, 0, 0, 0 });
 
 	this->program.use();
 
@@ -87,7 +95,9 @@ void Voxelizer::voxelize(Scene& scene)
 	glUniform3i(this->program.get_uniform_location("u_voxel_size"), this->width, this->height, this->depth);
 
 	// Voxel
-	glBindImageTexture(1, voxel, 0, GL_FALSE, GL_TRUE, GL_READ_WRITE, GL_RGBA8);
+	glActiveTexture(GL_TEXTURE5);
+	glBindTexture(GL_TEXTURE_3D, voxel);
+	glBindImageTexture(5, voxel, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA32F);
 
 	for (Mesh mesh : scene.get_meshes())
 	{
@@ -97,8 +107,10 @@ void Voxelizer::voxelize(Scene& scene)
 		glUniform4f(this->program.get_uniform_location("u_color"), mesh.get_color().r, mesh.get_color().g, mesh.get_color().b, mesh.get_color().a);
 
 		glBindVertexArray(mesh.get_vao());
+
 		glDrawElements(GL_TRIANGLES, mesh.get_elements_count(), GL_UNSIGNED_INT, NULL);
-		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 	}
+
+	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 }
 

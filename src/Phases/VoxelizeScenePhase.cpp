@@ -1,5 +1,6 @@
 #include "VoxelizeScenePhase.hpp"
 
+#include <GLFW/glfw3.h>
 #include <iostream>
 
 VoxelizeScenePhase::VoxelizeScenePhase(Scene* scene)
@@ -17,8 +18,6 @@ void VoxelizeScenePhase::onEnable(PhaseManager* phaseManager)
 
 void VoxelizeScenePhase::onRender(PhaseManager* phaseManager)
 {
-	glClearColor(1, 1, 1, 1);
-
 	std::cout << "VOXELIZER > Voxelizing..." << std::endl;
 	voxelizer->voxelize(*this->scene);
 }
