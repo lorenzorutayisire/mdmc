@@ -12,7 +12,7 @@ VoxelizeScenePhase::VoxelizeScenePhase(Scene* scene) :
 
 void VoxelizeScenePhase::onEnable(PhaseManager* phaseManager)
 {
-	this->voxelizer = std::make_unique<Voxelizer>(Voxelizer(*this->scene, 64));
+	this->voxelizer = std::make_unique<Voxelizer>(Voxelizer(*this->scene, 128));
 	this->voxelizer->voxelize(phaseManager->getWindow());
 	std::cout << "Voxelization done" << std::endl;
 
@@ -21,10 +21,82 @@ void VoxelizeScenePhase::onEnable(PhaseManager* phaseManager)
 	glfwGetWindowSize(phaseManager->getWindow(), &width, &height);
 	glViewport(0, 0, width, height);
 
-	// Program
+
+	// ====================================================== VBO
+
+	glGenBuffers(1, &vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+	std::vector<GLfloat> vertices;
+	glm::vec3 size = this->scene->get_size();
+
+	// X planes
+	for (unsigned int x = 0; x < size.x; x++)
+	{
+		vertices.push_back(x);
+		vertices.push_back(0);
+		vertices.push_back(0);
+
+		vertices.push_back(x);
+		vertices.push_back(size.y);
+		vertices.push_back(0);
+
+		vertices.push_back(x);
+		vertices.push_back(size.y);
+		vertices.push_back(size.z);
+
+		vertices.push_back(x);
+		vertices.push_back(0);
+		vertices.push_back(size.z);
+	}
+
+	// Y planes
+	for (unsigned int y = 0; y < size.y; y++)
+	{
+		vertices.push_back(0);
+		vertices.push_back(y);
+		vertices.push_back(0);
+
+		vertices.push_back(size.x);
+		vertices.push_back(y);
+		vertices.push_back(0);
+
+		vertices.push_back(size.x);
+		vertices.push_back(y);
+		vertices.push_back(size.z);
+
+		vertices.push_back(0);
+		vertices.push_back(y);
+		vertices.push_back(size.z);
+	}
+
+	// Z planes
+	for (unsigned int z = 0; z < size.z; z++)
+	{
+		vertices.push_back(0);
+		vertices.push_back(0);
+		vertices.push_back(z);
+
+		vertices.push_back(size.x);
+		vertices.push_back(0);
+		vertices.push_back(z);
+
+		vertices.push_back(size.x);
+		vertices.push_back(size.y);
+		vertices.push_back(z);
+
+		vertices.push_back(0);
+		vertices.push_back(size.y);
+		vertices.push_back(z);
+	}
+
+	vertices_count = vertices.size();
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(GLfloat), &vertices[0], GL_STATIC_DRAW);
+
+	// ====================================================== Program
 	// Vertex
 	Shader v_shader(GL_VERTEX_SHADER);
-	v_shader.source_from_file("resources/shaders/render_voxel.vert.glsl");
+	v_shader.source_from_file("resources/shaders/render_voxel_plane.vert.glsl");
 	if (!v_shader.compile())
 	{
 		std::cerr << v_shader.get_log() << std::endl;
@@ -32,6 +104,7 @@ void VoxelizeScenePhase::onEnable(PhaseManager* phaseManager)
 	}
 	this->program.attach(v_shader);
 
+	/*
 	// Geometry
 	Shader g_shader(GL_GEOMETRY_SHADER);
 	g_shader.source_from_file("resources/shaders/render_voxel.geom.glsl");
@@ -41,10 +114,11 @@ void VoxelizeScenePhase::onEnable(PhaseManager* phaseManager)
 		throw;
 	}
 	this->program.attach(g_shader);
+	*/
 
 	// Fragment
 	Shader f_shader(GL_FRAGMENT_SHADER);
-	f_shader.source_from_file("resources/shaders/render_voxel.frag.glsl");
+	f_shader.source_from_file("resources/shaders/render_voxel_plane.frag.glsl");
 	if (!f_shader.compile())
 	{
 		std::cerr << f_shader.get_log() << std::endl;
@@ -59,6 +133,13 @@ void VoxelizeScenePhase::onEnable(PhaseManager* phaseManager)
 		throw;
 
 	}
+
+	// Enables alpha test
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_BLEND);
+
+	// Keep triangles with anti-clockwise vertices order
+	glDisable(GL_CULL_FACE);
 }
 
 void VoxelizeScenePhase::onUpdate(PhaseManager* phaseManager, float delta)
@@ -71,7 +152,7 @@ void VoxelizeScenePhase::onUpdate(PhaseManager* phaseManager, float delta)
 	}
 
 	// Camera Movement
-	const float movement_sensibility = 0.01 * delta;
+	const float movement_sensibility = 0.1 * delta;
 
 	if (glfwGetKey(window, GLFW_KEY_W))
 	{
@@ -141,5 +222,11 @@ void VoxelizeScenePhase::onRender(PhaseManager* phaseManager)
 	glBindTexture(GL_TEXTURE_3D, voxel); // important!
 	glBindImageTexture(0, voxel, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA32F);
 
-	glDrawArrays(GL_POINTS, 0, voxelizer->get_size());
+	// ====================================================== VBO
+	glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
+
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
+
+	glDrawArrays(GL_QUADS, 0, vertices_count);
 }

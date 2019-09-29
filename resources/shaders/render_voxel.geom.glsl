@@ -1,24 +1,24 @@
 #version 430
 
 layout(points) in;
-layout(triangle_strip, max_vertices = 14) out;
+layout(triangle_strip, max_vertices = 36) out;
 
 uniform mat4 u_camera;
 uniform mat4 u_transform;
 
-in vec4 v_position[];
+in vec4 v_voxel_coords[];
 
-out vec4 g_position;
+out vec4 g_voxel_coords;
 
 void emit_offset_vertex(float x_offset, float y_offset, float z_offset)
 {
-	gl_Position = u_camera * u_transform * vec4(v_position[0].x + x_offset, v_position[0].y + y_offset, v_position[0].z + z_offset, 1);
+	gl_Position = u_camera * u_transform * vec4(v_voxel_coords[0].x + x_offset, v_voxel_coords[0].y + y_offset, v_voxel_coords[0].z + z_offset, 1);
 	EmitVertex();
 }
 
 void main()
 {
-	g_position = v_position[0];
+	g_voxel_coords = v_voxel_coords[0];
 
 	// Front
 	emit_offset_vertex(0, 1, 1); // Front top left

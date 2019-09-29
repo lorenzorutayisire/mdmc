@@ -19,6 +19,9 @@ private:
 	tdogl::Camera camera;
 	Program program;
 
+	GLuint vbo;
+	GLuint vertices_count;
+
 	double lastCursorX, lastCursorY;
 
 public:
