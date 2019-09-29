@@ -15,5 +15,5 @@ void main()
 	vec4 color = u_color * texture(u_texture2d, v_tex_coords);
 
 	imageStore(u_voxel, position, color);
-	gl_FragColor = color;
+	//gl_FragColor = color;
 }

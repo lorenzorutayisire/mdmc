@@ -1,19 +1,31 @@
 #pragma once
 
+#include <memory>
+
 #include "Program.hpp"
+#include "Scene/Scene.hpp"
 
 #include <GLFW/glfw3.h>
-#include "Scene/Scene.hpp"
 
 class Voxelizer
 {
 private:
+	std::shared_ptr<Scene> scene;
+	uint16_t width, height, depth;
+
 	Program program;
-	GLuint voxel;
+	GLuint voxel; // texture3d
 
 public:
-	Voxelizer();
+	Voxelizer(Scene& scene, uint16_t height);
 	~Voxelizer();
 
-	void voxelize(GLFWwindow* window, Scene& scene, uint16_t height);
+	inline uint16_t get_width() { return this->width; }
+	inline uint16_t get_height() { return this->height; }
+	inline uint16_t get_depth() { return this->depth; }
+	inline uint16_t get_size() { return this->width * this->height * this->depth; }
+
+	void voxelize(GLFWwindow* window);
+
+	inline GLuint get_voxel() { return voxel; }
 };
