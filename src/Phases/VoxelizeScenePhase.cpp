@@ -12,7 +12,7 @@ VoxelizeScenePhase::VoxelizeScenePhase(Scene* scene) :
 
 void VoxelizeScenePhase::onEnable(PhaseManager* phaseManager)
 {
-	this->voxelizer = std::make_unique<Voxelizer>(Voxelizer(*this->scene, 128));
+	this->voxelizer = std::make_unique<Voxelizer>(Voxelizer(*this->scene, 32));
 	this->voxelizer->voxelize(phaseManager->getWindow());
 	std::cout << "Voxelization done" << std::endl;
 
@@ -31,7 +31,7 @@ void VoxelizeScenePhase::onEnable(PhaseManager* phaseManager)
 	glm::vec3 size = this->scene->get_size();
 
 	// X planes
-	for (unsigned int x = 0; x < size.x; x++)
+	for (GLfloat x = 0.5; x < size.x; x++)
 	{
 		vertices.push_back(x);
 		vertices.push_back(0);
@@ -51,7 +51,7 @@ void VoxelizeScenePhase::onEnable(PhaseManager* phaseManager)
 	}
 
 	// Y planes
-	for (unsigned int y = 0; y < size.y; y++)
+	for (GLfloat y = 0.5; y <= size.y; y++)
 	{
 		vertices.push_back(0);
 		vertices.push_back(y);
@@ -71,7 +71,7 @@ void VoxelizeScenePhase::onEnable(PhaseManager* phaseManager)
 	}
 
 	// Z planes
-	for (unsigned int z = 0; z < size.z; z++)
+	for (GLfloat z = 0.5; z < size.z; z++)
 	{
 		vertices.push_back(0);
 		vertices.push_back(0);
@@ -135,8 +135,8 @@ void VoxelizeScenePhase::onEnable(PhaseManager* phaseManager)
 	}
 
 	// Enables alpha test
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glEnable(GL_BLEND);
+	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	//glEnable(GL_BLEND);
 
 	// Keep triangles with anti-clockwise vertices order
 	glDisable(GL_CULL_FACE);
@@ -203,7 +203,7 @@ void VoxelizeScenePhase::onRender(PhaseManager* phaseManager)
 	this->program.use();
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glClearColor(0, 0, 0, 0);
+	glClearColor(1, 1, 1, 0);
 
 	// Transform
 	glm::mat4 transform = glm::mat4(1.0);
@@ -214,13 +214,12 @@ void VoxelizeScenePhase::onRender(PhaseManager* phaseManager)
 	glUniformMatrix4fv(this->program.get_uniform_location("u_camera"), 1, GL_FALSE, glm::value_ptr(camera));
 
 	// Voxel Size
-	// glUniform3i(this->program.get_uniform_location("u_voxel_size"), this->voxelizer->get_width(), this->voxelizer->get_height(), this->voxelizer->get_depth());
+	glUniform3f(this->program.get_uniform_location("u_voxel_size"), this->voxelizer->get_width(), this->voxelizer->get_height(), this->voxelizer->get_depth());
 
 	// Voxel
 	GLuint voxel = this->voxelizer->get_voxel();
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_3D, voxel); // important!
-	glBindImageTexture(0, voxel, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA32F);
+	glBindTexture(GL_TEXTURE_3D, voxel);
 
 	// ====================================================== VBO
 	glBindBuffer(GL_ARRAY_BUFFER, this->vbo);

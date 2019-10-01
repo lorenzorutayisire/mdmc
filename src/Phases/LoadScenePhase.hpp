@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Phase.hpp"
-
 #include <string>
+
+#include "Phase.hpp"
 
 class LoadScenePhase : public Phase
 {

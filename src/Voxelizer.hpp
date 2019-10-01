@@ -2,8 +2,8 @@
 
 #include <memory>
 
-#include "Program.hpp"
-#include "Scene/Scene.hpp"
+#include "GL/Program.hpp"
+#include "GL/Scene.hpp"
 
 #include <GLFW/glfw3.h>
 

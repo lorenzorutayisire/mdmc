@@ -25,9 +25,9 @@ Voxelizer::Voxelizer(Scene& scene, uint16_t height)
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_REPEAT);
 
 	glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA32F, width, height, depth, 0, GL_RGBA, GL_FLOAT, NULL);
 	glClearTexImage(voxel, 0, GL_RGBA, GL_FLOAT, new float[4]{ 0, 0, 0, 0 });
@@ -41,6 +41,16 @@ Voxelizer::Voxelizer(Scene& scene, uint16_t height)
 		throw;
 	}
 	this->program.attach(v_shader);
+
+	// Geometry
+	Shader g_shader(GL_GEOMETRY_SHADER);
+	g_shader.source_from_file("resources/shaders/voxelize.geom.glsl");
+	if (!g_shader.compile())
+	{
+		std::cerr << g_shader.get_log() << std::endl;
+		throw;
+	}
+	this->program.attach(g_shader);
 
 	// Fragment
 	Shader f_shader(GL_FRAGMENT_SHADER);

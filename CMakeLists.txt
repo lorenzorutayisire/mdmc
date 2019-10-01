@@ -12,33 +12,40 @@ file(COPY ${RESOURCES} DESTINATION "${CMAKE_BINARY_DIR}/bin/resources")
 
 add_executable (
 	mdmc
+	
+	# Main
 	"src/Main.cpp"
 	
-	"src/Camera.hpp"
-	"src/Camera.cpp"
-	
-	"src/Program.hpp"
-	"src/Program.cpp"
-
-	"src/Shader.hpp"
-	"src/Shader.cpp"
-
 	"src/Voxelizer.hpp"
 	"src/Voxelizer.cpp"
+	
+	"src/Phase.hpp"
+	"src/PhaseManager.hpp"
+	
+	# Routine
+	"src/Routine/LoadingPhase.hpp"
+	"src/Routine/VisualizePhase.hpp"
 
-	"src/Phases/Phase.hpp"
-	"src/Phases/PhaseManager.hpp"
-	"src/Phases/PhaseManager.cpp"
-	"src/Phases/LoadScenePhase.hpp"
-	"src/Phases/LoadScenePhase.cpp"
-	"src/Phases/VisualizeScenePhase.hpp"
-	"src/Phases/VisualizeScenePhase.cpp"
-	"src/Phases/VoxelizeScenePhase.hpp"
-	"src/Phases/VoxelizeScenePhase.cpp"
+	# GL
+	"src/GL/Mesh.hpp"
+	"src/GL/Mesh.cpp"
 
-	"src/Scene/Mesh.hpp"
-	"src/Scene/Mesh.cpp"
-	"src/Scene/Scene.hpp"
-	"src/Scene/Scene.cpp"
+	"src/GL/Scene.hpp"
+	"src/GL/Scene.cpp"
+
+	"src/GL/Camera.hpp"
+	"src/GL/Camera.cpp"
+
+	"src/GL/Shader.hpp"
+	"src/GL/Shader.cpp"
+
+	"src/GL/Program.hpp"
+	"src/GL/Program.cpp"
+
+	#"src/Phases/LoadScenePhase.hpp"
+	#"src/Phases/LoadScenePhase.cpp"
+	#"src/Phases/VisualizeScenePhase.hpp"
+	#"src/Phases/VisualizeScenePhase.cpp"
+	#"src/Phases/VoxelizeScenePhase.cpp"
 )
  target_link_libraries(mdmc ${CONAN_LIBS})

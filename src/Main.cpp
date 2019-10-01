@@ -6,9 +6,8 @@
 #include <stdexcept>
 #include <iostream>
 
-#include "Phases/PhaseManager.hpp"
-#include "Phases/LoadScenePhase.hpp"
-
+#include "PhaseManager.hpp"
+#include "Routine/LoadingPhase.hpp"
 
 int main()
 {
@@ -43,17 +42,17 @@ int main()
 
 	glfwShowWindow(window);
 
-	PhaseManager phaseManager(window);
+	PhaseManager phase_manager(window);
 
-	phaseManager.setPhase(new LoadScenePhase("resources/skull/12140_Skull_v3_L2.obj"));
+	phase_manager.set_phase(new LoadingPhase("resources/skull/12140_Skull_v3_L2.obj"));
 
 	while (!glfwWindowShouldClose(window))
 	{
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glClearColor(0, 0, 0, 0);
+		glClearColor(1,1,1, 0);
 
-		phaseManager.onUpdate(1.0f);
-		phaseManager.onRender();
+		phase_manager.on_update(1.0f);
+		phase_manager.on_render();
 
 		// Closes the window when ESCAPE key is pressed.
 		if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
