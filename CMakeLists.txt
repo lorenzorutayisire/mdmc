@@ -16,6 +16,8 @@ add_executable (
 	# Main
 	"src/Main.cpp"
 	
+	"src/VoxelStage.hpp"
+
 	"src/Voxelizer.hpp"
 	"src/Voxelizer.cpp"
 	
@@ -32,6 +34,9 @@ add_executable (
 
 	"src/GL/Scene.hpp"
 	"src/GL/Scene.cpp"
+	
+	"src/GL/Viewer.hpp"
+	"src/GL/Viewer.cpp"
 
 	"src/GL/Camera.hpp"
 	"src/GL/Camera.cpp"

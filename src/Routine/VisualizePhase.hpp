@@ -5,6 +5,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include <iostream>
+#include <memory>
 
 #include "Phase.hpp"
 #include "PhaseManager.hpp"
@@ -14,48 +15,58 @@
 #include "GL/Shader.hpp"
 #include "GL/Program.hpp"
 
-#include "GL/Camera.hpp"
+#include "GL/Viewer.hpp"
+
+#include "Voxelizer.hpp"
 
 class VisualizePhase : public Phase
 {
 private:
-	Scene* scene;
+	std::shared_ptr<Voxelizer> voxelizer;
 	Program program;
+	Viewer viewer;
 
-	tdogl::Camera camera;
-
-	glm::mat4 x_ortho_proj;
-	glm::mat4 y_ortho_proj;
-	glm::mat4 z_ortho_proj;
-
-	char camera_selection;
+	char camera_mode;
 
 	void create_program()
 	{
 		Shader vertex_shader(GL_VERTEX_SHADER);
 		vertex_shader.source_from_file("resources/shaders/visualize.vert.glsl");
-		vertex_shader.compile();
+		if (!vertex_shader.compile())
+		{
+			std::cerr << vertex_shader.get_log() << std::endl;
+			throw;
+		}
 		this->program.attach(vertex_shader);
 
 		Shader fragment_shader(GL_FRAGMENT_SHADER);
 		fragment_shader.source_from_file("resources/shaders/visualize.frag.glsl");
-		fragment_shader.compile();
-		this->program.attach(vertex_shader);
+		if (!fragment_shader.compile())
+		{
+			std::cerr << fragment_shader.get_log() << std::endl;
+			throw;
+		}
+		this->program.attach(fragment_shader);
 
-		this->program.link();
+		if (!this->program.link())
+		{
+			std::cerr << this->program.get_log() << std::endl;
+			throw;
+		}
 	}
 
 public:
 	VisualizePhase(Scene* scene)
 	{
-		this->scene = scene;
+		this->voxelizer = std::make_shared<Voxelizer>(Voxelizer(*scene, 256));
 
-		glm::mat4 ortho = glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f, 2.0f - 1.0f, 3.0f);
-		this->x_ortho_proj = ortho * glm::lookAt(glm::vec3(2, 0, 0), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
-		this->y_ortho_proj = ortho * glm::lookAt(glm::vec3(0, 2, 0), glm::vec3(0, 0, 0), glm::vec3(0, 0, -1));
-		this->z_ortho_proj = ortho * glm::lookAt(glm::vec3(0, 0, 2), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+		glm::mat4 transform = glm::mat4(1.0);
+		transform = glm::scale(transform, glm::vec3(1 / scene->get_size().y));
+		transform = glm::translate(transform, -scene->get_min_vertex());
+		glUniformMatrix4fv(this->program.get_uniform_location("u_transform"), 1, GL_FALSE, glm::value_ptr(transform));
 
-		this->camera_selection = 'c';
+
+		this->camera_mode = 'c';
 	}
 
 	void on_enable(PhaseManager* phase_manager)
@@ -68,43 +79,52 @@ public:
 		glfwSetInputMode(phase_manager->get_window(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	}
 
-	void set_camera_selection(char camera_selection)
+	void set_camera_mode(char camera_mode)
 	{
-		if (this->camera_selection != camera_selection)
+		if (this->camera_mode != camera_mode)
 		{
-			this->camera_selection = camera_selection;
-			std::cout << "Camera changed to: " << camera_selection << std::endl;
+			this->camera_mode = camera_mode;
+			std::cout << "camera_mode: " << camera_mode << std::endl;
 		}
 	}
 
 	void on_update(PhaseManager* phase_manager, float delta)
 	{
-		if (glfwGetKey(phase_manager->get_window(), GLFW_KEY_X) == GLFW_PRESS) { this->set_camera_selection('x'); }
-		if (glfwGetKey(phase_manager->get_window(), GLFW_KEY_Y) == GLFW_PRESS) { this->set_camera_selection('y'); }
-		if (glfwGetKey(phase_manager->get_window(), GLFW_KEY_Z) == GLFW_PRESS) { this->set_camera_selection('z'); }
-		if (glfwGetKey(phase_manager->get_window(), GLFW_KEY_C) == GLFW_PRESS) { this->set_camera_selection('c'); }
+		if (camera_mode == 'c')
+		{
+			this->viewer.on_update(phase_manager->get_window(), delta);
+		}
+
+		if (glfwGetKey(phase_manager->get_window(), GLFW_KEY_X) == GLFW_PRESS) { this->set_camera_mode('x'); }
+		if (glfwGetKey(phase_manager->get_window(), GLFW_KEY_Y) == GLFW_PRESS) { this->set_camera_mode('y'); }
+		if (glfwGetKey(phase_manager->get_window(), GLFW_KEY_Z) == GLFW_PRESS) { this->set_camera_mode('z'); }
+		if (glfwGetKey(phase_manager->get_window(), GLFW_KEY_C) == GLFW_PRESS) { this->set_camera_mode('c'); }
 	}
 
 	void on_render(PhaseManager* phase_manager)
 	{
 		this->program.use();
 
-		switch (this->camera_selection)
+		// Transform
+		glUniformMatrix4fv(this->program.get_uniform_location("u_transform"), 1, GL_FALSE, glm::value_ptr(this->voxelizer->get_transform()));
+
+		// Camera
+		switch (this->camera_mode)
 		{
 		case 'x':
-			glUniformMatrix4fv(this->program.get_uniform_location("u_camera"), 1, GL_FALSE, glm::value_ptr(this->x_ortho_proj));
+			glUniformMatrix4fv(this->program.get_uniform_location("u_camera"), 1, GL_FALSE, glm::value_ptr(this->voxelizer->get_x_ortho_projection()));
 			break;
 		case 'y':
-			glUniformMatrix4fv(this->program.get_uniform_location("u_camera"), 1, GL_FALSE, glm::value_ptr(this->y_ortho_proj));
+			glUniformMatrix4fv(this->program.get_uniform_location("u_camera"), 1, GL_FALSE, glm::value_ptr(this->voxelizer->get_y_ortho_projection()));
 			break;
 		case 'z':
-			glUniformMatrix4fv(this->program.get_uniform_location("u_camera"), 1, GL_FALSE, glm::value_ptr(this->z_ortho_proj));
+			glUniformMatrix4fv(this->program.get_uniform_location("u_camera"), 1, GL_FALSE, glm::value_ptr(this->voxelizer->get_z_ortho_projection()));
 			break;
 		case 'c':
-			glUniformMatrix4fv(this->program.get_uniform_location("u_camera"), 1, GL_FALSE, glm::value_ptr(this->camera.matrix()));
+			glUniformMatrix4fv(this->program.get_uniform_location("u_camera"), 1, GL_FALSE, glm::value_ptr(this->viewer.get_camera().matrix()));
 			break;
 		}
 
-		this->scene->render();
+		this->voxelizer->get_scene()->render();
 	}
 };

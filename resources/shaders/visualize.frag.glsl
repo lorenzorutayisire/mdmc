@@ -1,8 +1,8 @@
-#version 450
+#version 430
 
 in vec2 v_tex_coord;
 
-layout(location = 2) uniform vec4 u_color;
+layout(location = 3) uniform vec4 u_color;
 uniform sampler2D u_texture2d;
 
 void main()

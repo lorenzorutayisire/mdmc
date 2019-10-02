@@ -18,6 +18,17 @@ Voxelizer::Voxelizer(Scene& scene, uint16_t height)
 	this->width = scalar * scene.get_size().x * height;
 	this->depth = scalar * scene.get_size().z * height;
 
+	// Transform
+	this->transform = glm::mat4(1.0);
+	transform = glm::scale(this->transform, glm::vec3(1 / this->scene->get_size().y));
+	transform = glm::translate(this->transform, -this->scene->get_min_vertex());
+
+	// Projections
+	glm::mat4 ortho = glm::ortho(0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 2.0f);
+	this->x_ortho_projection = ortho * glm::lookAt(glm::vec3(-1, 0, 0), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+	this->y_ortho_projection = ortho * glm::lookAt(glm::vec3(0, 2, 1), glm::vec3(0, 0, 1), glm::vec3(0, 0, -1));
+	this->z_ortho_projection = ortho * glm::lookAt(glm::vec3(0, 0, 2), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+
 	// Texture3D
 	glGenTextures(1, &voxel);
 	glBindTexture(GL_TEXTURE_3D, voxel);
@@ -90,10 +101,7 @@ void Voxelizer::voxelize(GLFWwindow* window)
 	this->program.use();
 
 	// Transform
-	glm::mat4 transform = glm::mat4(1.0);
-	transform = glm::scale(transform, glm::vec3(1 / scene->get_size().y));
-	transform = glm::translate(transform, -scene->get_min_vertex());
-	glUniformMatrix4fv(this->program.get_uniform_location("u_transform"), 1, GL_FALSE, glm::value_ptr(transform));
+	glUniformMatrix4fv(this->program.get_uniform_location("u_transform"), 1, GL_FALSE, glm::value_ptr(this->transform));
 
 	// Camera
 	glm::mat4 camera = glm::mat4(1.0);
