@@ -18,6 +18,8 @@ Voxelizer::Voxelizer(Scene& scene, uint16_t height)
 	this->width = scalar * scene.get_size().x * height;
 	this->depth = scalar * scene.get_size().z * height;
 
+	std::cout << "Voxel size: " << this->width << "x" << this->height << "x" << this->depth << std::endl;
+
 	// Transform
 	this->transform = glm::mat4(1.0);
 	transform = glm::scale(this->transform, glm::vec3(1 / this->scene->get_size().y));
@@ -85,7 +87,7 @@ Voxelizer::~Voxelizer()
 {
 }
 
-void Voxelizer::voxelize(GLFWwindow* window)
+void Voxelizer::voxelize()
 {
 	glEnable(GL_TEXTURE_3D);
 	glDisable(GL_CULL_FACE);
@@ -93,7 +95,7 @@ void Voxelizer::voxelize(GLFWwindow* window)
 	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 
 	//glfwSetWindowSize(window, width, height);
-	glViewport(0, 0, width, height);
+	glViewport(0, 0, this->width, this->height);
 	
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	//glClearColor(0, 0, 0, 0);
@@ -103,13 +105,13 @@ void Voxelizer::voxelize(GLFWwindow* window)
 	// Transform
 	glUniformMatrix4fv(this->program.get_uniform_location("u_transform"), 1, GL_FALSE, glm::value_ptr(this->transform));
 
-	// Camera
-	glm::mat4 camera = glm::mat4(1.0);
-	camera = glm::ortho(0, 1, 0, 1, -1, 0);
-	glUniformMatrix4fv(this->program.get_uniform_location("u_camera"), 1, GL_FALSE, glm::value_ptr(camera));
+	// Projections
+	glUniformMatrix4fv(this->program.get_uniform_location("u_x_ortho_projection"), 1, GL_FALSE, glm::value_ptr(this->x_ortho_projection));
+	glUniformMatrix4fv(this->program.get_uniform_location("u_y_ortho_projection"), 1, GL_FALSE, glm::value_ptr(this->y_ortho_projection));
+	glUniformMatrix4fv(this->program.get_uniform_location("u_z_ortho_projection"), 1, GL_FALSE, glm::value_ptr(this->z_ortho_projection));
 
 	// Voxel Size
-	glUniform3i(this->program.get_uniform_location("u_voxel_size"), width, height, depth);
+	glUniform3i(this->program.get_uniform_location("u_voxel_size"), this->width, this->height, this->depth);
 
 	// Voxel
 	glActiveTexture(GL_TEXTURE5);

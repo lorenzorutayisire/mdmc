@@ -22,7 +22,7 @@ public:
 	void on_enable(PhaseManager* phase_manager)
 	{
 		std::cout << "================================================================" << std::endl;
-		std::cout << "Loading scene" << std::endl;
+		std::cout << "LoadingPhase" << std::endl;
 		std::cout << "================================================================" << std::endl;
 
 		Scene* scene = new Scene();

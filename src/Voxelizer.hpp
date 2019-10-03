@@ -36,7 +36,7 @@ public:
 	inline uint16_t get_depth() { return this->depth; }
 	inline uint16_t get_size() { return this->width * this->height * this->depth; }
 
-	void voxelize(GLFWwindow* window);
+	void voxelize();
 
 	inline GLuint get_voxel() { return voxel; }
 };

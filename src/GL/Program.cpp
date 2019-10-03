@@ -1,6 +1,7 @@
 #include "Program.hpp"
 
 #include <vector>
+#include <iostream>
 
 Program::Program()
 {
@@ -48,10 +49,22 @@ std::string Program::get_log()
 
 GLint Program::get_attrib_location(const GLchar* name)
 {
-	return glGetAttribLocation(this->id, name);
+	GLint attrib = glGetAttribLocation(this->id, name);
+	if (attrib < 0)
+	{
+		std::cerr << "Attrib " << name << " location: " << attrib << std::endl;
+		throw;
+	}
+	return attrib;
 }
 
 GLint Program::get_uniform_location(const GLchar* name)
 {
-	return glGetUniformLocation(this->id, name);
+	GLint uniform = glGetUniformLocation(this->id, name);
+	if (uniform < 0)
+	{
+		std::cerr << "Uniform " << name << " location: " << uniform << std::endl;
+		throw;
+	}
+	return uniform;
 }

@@ -27,6 +27,7 @@ add_executable (
 	# Routine
 	"src/Routine/LoadingPhase.hpp"
 	"src/Routine/VisualizePhase.hpp"
+	"src/Routine/VoxelizePhase.hpp"
 
 	# GL
 	"src/GL/Mesh.hpp"

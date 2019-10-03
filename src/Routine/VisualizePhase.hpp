@@ -18,6 +18,7 @@
 #include "GL/Viewer.hpp"
 
 #include "Voxelizer.hpp"
+#include "VoxelizePhase.hpp"
 
 class VisualizePhase : public Phase
 {
@@ -58,24 +59,18 @@ private:
 public:
 	VisualizePhase(Scene* scene)
 	{
-		this->voxelizer = std::make_shared<Voxelizer>(Voxelizer(*scene, 256));
-
-		glm::mat4 transform = glm::mat4(1.0);
-		transform = glm::scale(transform, glm::vec3(1 / scene->get_size().y));
-		transform = glm::translate(transform, -scene->get_min_vertex());
-		glUniformMatrix4fv(this->program.get_uniform_location("u_transform"), 1, GL_FALSE, glm::value_ptr(transform));
-
-
+		this->voxelizer = std::make_shared<Voxelizer>(Voxelizer(*scene, 32));
 		this->camera_mode = 'c';
 	}
 
 	void on_enable(PhaseManager* phase_manager)
 	{
 		std::cout << "================================================================" << std::endl;
-		std::cout << "Visualizing scene" << std::endl;
+		std::cout << "VisualizingPhase" << std::endl;
 		std::cout << "================================================================" << std::endl;
 
 		this->create_program();
+
 		glfwSetInputMode(phase_manager->get_window(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	}
 
@@ -99,6 +94,11 @@ public:
 		if (glfwGetKey(phase_manager->get_window(), GLFW_KEY_Y) == GLFW_PRESS) { this->set_camera_mode('y'); }
 		if (glfwGetKey(phase_manager->get_window(), GLFW_KEY_Z) == GLFW_PRESS) { this->set_camera_mode('z'); }
 		if (glfwGetKey(phase_manager->get_window(), GLFW_KEY_C) == GLFW_PRESS) { this->set_camera_mode('c'); }
+
+		if (glfwGetKey(phase_manager->get_window(), GLFW_KEY_ENTER) == GLFW_PRESS)
+		{
+			phase_manager->set_phase(new VoxelizePhase(this->voxelizer));
+		}
 	}
 
 	void on_render(PhaseManager* phase_manager)

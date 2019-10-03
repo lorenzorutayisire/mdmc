@@ -188,6 +188,7 @@ void Mesh::load(std::string folder, aiMesh* ai_mesh, aiMaterial* ai_material)
 
 void Mesh::render()
 {
+	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, this->texture);
 
 	glUniform4f(3, this->color.r, this->color.g, this->color.b, this->color.a);
