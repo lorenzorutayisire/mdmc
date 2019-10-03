@@ -59,7 +59,7 @@ private:
 public:
 	VisualizePhase(Scene* scene)
 	{
-		this->voxelizer = std::make_shared<Voxelizer>(Voxelizer(*scene, 256));
+		this->voxelizer = std::make_shared<Voxelizer>(Voxelizer(*scene, 64));
 		this->camera_mode = 'c';
 	}
 

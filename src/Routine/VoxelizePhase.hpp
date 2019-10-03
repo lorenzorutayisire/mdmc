@@ -92,9 +92,9 @@ private:
 
 		std::vector<GLfloat> vertices;
 		glm::vec3 voxel_size = glm::vec3(
-			this->voxelizer->get_width(),
-			this->voxelizer->get_height(),
-			this->voxelizer->get_depth()
+			this->voxelizer->get_side(),
+			this->voxelizer->get_side(),
+			this->voxelizer->get_side()
 		);
 
 		this->push_x_planes(vertices, voxel_size);
@@ -180,9 +180,9 @@ public:
 		// Voxel Size
 		glUniform3f(
 			this->program.get_uniform_location("u_voxel_size"),
-			this->voxelizer->get_width(),
-			this->voxelizer->get_height(),
-			this->voxelizer->get_depth()
+			this->voxelizer->get_side(),
+			this->voxelizer->get_side(),
+			this->voxelizer->get_side()
 		);
 
 		// Voxel

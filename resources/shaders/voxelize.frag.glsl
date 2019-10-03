@@ -18,13 +18,14 @@ void main()
 	switch (g_axis)
 	{
 	case 0: // X
-		position.zyx = position.xyz;
+		position.xyz = position.zyx;
 		break;
 	case 1: // Y
-		position.xzy = ivec3(position.x, -position.y, position.z);
+		position.xyz = position.xzy;
 		break;
 	case 2: // Z
-		position.xyz = position.xyz;
+		position.xy = position.xy;
+		position.z = u_voxel_size.z - position.z;
 		break;
 	}
 

@@ -11,7 +11,7 @@ class Voxelizer
 {
 private:
 	std::shared_ptr<Scene> scene;
-	uint16_t width, height, depth;
+	uint16_t side;
 
 	glm::mat4 transform;
 	glm::mat4 x_ortho_projection, y_ortho_projection, z_ortho_projection;
@@ -31,10 +31,7 @@ public:
 	glm::mat4 get_y_ortho_projection() { return this->y_ortho_projection; }
 	glm::mat4 get_z_ortho_projection() { return this->z_ortho_projection; }
 
-	inline uint16_t get_width() { return this->width; }
-	inline uint16_t get_height() { return this->height; }
-	inline uint16_t get_depth() { return this->depth; }
-	inline uint16_t get_size() { return this->width * this->height * this->depth; }
+	inline uint16_t get_side() { return this->side; }
 
 	void voxelize();
 

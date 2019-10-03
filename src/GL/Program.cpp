@@ -61,10 +61,5 @@ GLint Program::get_attrib_location(const GLchar* name)
 GLint Program::get_uniform_location(const GLchar* name)
 {
 	GLint uniform = glGetUniformLocation(this->id, name);
-	if (uniform < 0)
-	{
-		std::cerr << "Uniform " << name << " location: " << uniform << std::endl;
-		throw;
-	}
 	return uniform;
 }

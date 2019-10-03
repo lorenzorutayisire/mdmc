@@ -6,6 +6,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include <algorithm>
 #include <iostream>
 
 Voxelizer::Voxelizer(Scene& scene, uint16_t height)
@@ -14,26 +15,24 @@ Voxelizer::Voxelizer(Scene& scene, uint16_t height)
 
 	float scalar = 1 / scene.get_size().y;
 
-	this->height = height;
-	this->width = scalar * scene.get_size().x * height;
-	this->depth = scalar * scene.get_size().z * height;
-
-	std::cout << "Voxel size: " << this->width << "x" << this->height << "x" << this->depth << std::endl;
+	uint16_t width = scalar * scene.get_size().x * height;
+	uint16_t depth = scalar * scene.get_size().z * height;
+	this->side = std::max(width, std::max(depth, height));
 
 	// Transform
 	this->transform = glm::mat4(1.0);
-	transform = glm::scale(this->transform, glm::vec3(1 / this->scene->get_size().y));
-	transform = glm::translate(this->transform, -this->scene->get_min_vertex());
+	this->transform = glm::scale(this->transform, glm::vec3(scalar));
+	this->transform = glm::translate(this->transform, -this->scene->get_min_vertex());
 
 	// Projections
 	glm::mat4 ortho = glm::ortho(0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 2.0f);
 	this->x_ortho_projection = ortho * glm::lookAt(glm::vec3(-1, 0, 0), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
-	this->y_ortho_projection = ortho * glm::lookAt(glm::vec3(0, 2, 1), glm::vec3(0, 0, 1), glm::vec3(0, 0, -1));
+	this->y_ortho_projection = ortho * glm::lookAt(glm::vec3(0, -1, 0), glm::vec3(0, 0, 0), glm::vec3(0, 0, 1));
 	this->z_ortho_projection = ortho * glm::lookAt(glm::vec3(0, 0, 2), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
 
 	// Texture3D
-	glGenTextures(1, &voxel);
-	glBindTexture(GL_TEXTURE_3D, voxel);
+	glGenTextures(1, &this->voxel);
+	glBindTexture(GL_TEXTURE_3D, this->voxel);
 
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -42,8 +41,8 @@ Voxelizer::Voxelizer(Scene& scene, uint16_t height)
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_REPEAT);
 
-	glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA32F, width, height, depth, 0, GL_RGBA, GL_FLOAT, NULL);
-	glClearTexImage(voxel, 0, GL_RGBA, GL_FLOAT, new float[4]{ 0, 0, 0, 0 });
+	glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA32F, this->side, this->side, this->side, 0, GL_RGBA, GL_FLOAT, NULL);
+	glClearTexImage(this->voxel, 0, GL_RGBA, GL_FLOAT, new float[4]{ 0, 0, 0, 0 });
 
 	// Vertex
 	Shader v_shader(GL_VERTEX_SHADER);
@@ -95,7 +94,7 @@ void Voxelizer::voxelize()
 	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 
 	//glfwSetWindowSize(window, width, height);
-	glViewport(0, 0, this->width, this->height);
+	glViewport(0, 0, this->side, this->side);
 	
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	//glClearColor(0, 0, 0, 0);
@@ -111,7 +110,7 @@ void Voxelizer::voxelize()
 	glUniformMatrix4fv(this->program.get_uniform_location("u_z_ortho_projection"), 1, GL_FALSE, glm::value_ptr(this->z_ortho_projection));
 
 	// Voxel Size
-	glUniform3i(this->program.get_uniform_location("u_voxel_size"), this->width, this->height, this->depth);
+	glUniform3i(this->program.get_uniform_location("u_voxel_size"), this->side, this->side, this->side);
 
 	// Voxel
 	glActiveTexture(GL_TEXTURE5);
