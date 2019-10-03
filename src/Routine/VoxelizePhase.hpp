@@ -91,7 +91,11 @@ private:
 		glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
 
 		std::vector<GLfloat> vertices;
-		glm::vec3 voxel_size = this->voxelizer->get_scene()->get_size();
+		glm::vec3 voxel_size = glm::vec3(
+			this->voxelizer->get_width(),
+			this->voxelizer->get_height(),
+			this->voxelizer->get_depth()
+		);
 
 		this->push_x_planes(vertices, voxel_size);
 		this->push_y_planes(vertices, voxel_size);
