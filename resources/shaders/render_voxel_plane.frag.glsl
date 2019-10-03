@@ -1,23 +1,30 @@
 #version 430
 
-in vec3 v_position;
+in vec3 v_tex_coord;
+in vec3 v_normal;
 
-uniform vec3 u_voxel_size;
+uniform float u_voxel_size; // The size of a single voxel.
 layout(binding = 0) uniform sampler3D u_voxel;
 
 void main()
 {
-	// v_position is interpolated and now represents a point within the voxel.
-	// Since uvw texture coordinates goes from 0.0 to 1.0, we need to normalize it.
+	vec3 before = v_tex_coord - v_normal * (u_voxel_size / 2);
+	vec3 after = v_tex_coord + v_normal * (u_voxel_size / 2);
 
-	vec4 color = texture(u_voxel, v_position / u_voxel_size);
+	vec4 before_color = texture(u_voxel, before);
+	vec4 after_color = texture(u_voxel, after);
 
-	// If the pixel indexed is empty, discards the fragment.
-	// Otherwise colors it.
-
-	if (color.a == 0)
+	if (before_color.a == 0 && after_color.a == 0)
 	{
 		discard;
 	}
-	gl_FragColor = color;
+
+	if (before_color.a == 0)
+	{
+		gl_FragColor = after_color;
+	}
+	else
+	{
+		gl_FragColor = before_color;
+	}
 }

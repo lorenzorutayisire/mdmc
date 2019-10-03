@@ -19,69 +19,135 @@ private:
 
 	std::shared_ptr<Voxelizer> voxelizer;
 
-	void push_x_planes(std::vector<GLfloat>& vertices, glm::vec3 voxel_size)
+	void push_x_planes(std::vector<GLfloat>& vertices, uint16_t side)
 	{
-		for (GLfloat x = 0.5; x < voxel_size.x; x++)
+		for (GLfloat i = 0; i <= side; i++)
 		{
+			float x = i / (GLfloat) side;
+
+			// v0
 			vertices.push_back(x);
 			vertices.push_back(0);
 			vertices.push_back(0);
 
-			vertices.push_back(x);
-			vertices.push_back(voxel_size.y);
+			vertices.push_back(1);
+			vertices.push_back(0);
 			vertices.push_back(0);
 
+			// v1
 			vertices.push_back(x);
-			vertices.push_back(voxel_size.y);
-			vertices.push_back(voxel_size.z);
+			vertices.push_back(1);
+			vertices.push_back(0);
 
+			vertices.push_back(1);
+			vertices.push_back(0);
+			vertices.push_back(0);
+
+			// v2
+			vertices.push_back(x);
+			vertices.push_back(1);
+			vertices.push_back(1);
+
+			vertices.push_back(1);
+			vertices.push_back(0);
+			vertices.push_back(0);
+
+			// v3
 			vertices.push_back(x);
 			vertices.push_back(0);
-			vertices.push_back(voxel_size.z);
+			vertices.push_back(1);
+
+			vertices.push_back(1);
+			vertices.push_back(0);
+			vertices.push_back(0);
 		}
 	}
 
-	void push_y_planes(std::vector<GLfloat>& vertices, glm::vec3 voxel_size)
+	void push_y_planes(std::vector<GLfloat>& vertices, uint16_t side)
 	{
-		for (GLfloat y = 0.5; y <= voxel_size.y; y++)
+		for (GLfloat i = 0; i <= side; i++)
 		{
+			float y = i / (GLfloat) side;
+
+			// v0
 			vertices.push_back(0);
 			vertices.push_back(y);
 			vertices.push_back(0);
 
-			vertices.push_back(voxel_size.x);
+			vertices.push_back(0);
+			vertices.push_back(1);
+			vertices.push_back(0);
+
+			// v1
+			vertices.push_back(1);
 			vertices.push_back(y);
 			vertices.push_back(0);
 
-			vertices.push_back(voxel_size.x);
+			vertices.push_back(0);
+			vertices.push_back(1);
+			vertices.push_back(0);
+
+			// v2
+			vertices.push_back(1);
 			vertices.push_back(y);
-			vertices.push_back(voxel_size.z);
+			vertices.push_back(1);
 
 			vertices.push_back(0);
+			vertices.push_back(1);
+			vertices.push_back(0);
+
+			// v3
+			vertices.push_back(0);
 			vertices.push_back(y);
-			vertices.push_back(voxel_size.z);
+			vertices.push_back(1);
+
+			vertices.push_back(0);
+			vertices.push_back(1);
+			vertices.push_back(0);
 		}
 	}
 
-	void push_z_planes(std::vector<GLfloat>& vertices, glm::vec3 voxel_size)
+	void push_z_planes(std::vector<GLfloat>& vertices, uint16_t side)
 	{
-		for (GLfloat z = 0.5; z < voxel_size.z; z++)
+		for (GLfloat i = 0; i <= side; i++)
 		{
+			float z = i / (GLfloat) side;
+
+			// v0
 			vertices.push_back(0);
 			vertices.push_back(0);
 			vertices.push_back(z);
 
-			vertices.push_back(voxel_size.x);
+			vertices.push_back(0);
+			vertices.push_back(0);
+			vertices.push_back(1);
+
+			// v1
+			vertices.push_back(1);
 			vertices.push_back(0);
 			vertices.push_back(z);
 
-			vertices.push_back(voxel_size.x);
-			vertices.push_back(voxel_size.y);
+			vertices.push_back(0);
+			vertices.push_back(0);
+			vertices.push_back(1);
+
+			// v2
+			vertices.push_back(1);
+			vertices.push_back(1);
 			vertices.push_back(z);
 
 			vertices.push_back(0);
-			vertices.push_back(voxel_size.y);
+			vertices.push_back(0);
+			vertices.push_back(1);
+
+			// v3
+			vertices.push_back(0);
+			vertices.push_back(1);
 			vertices.push_back(z);
+
+			vertices.push_back(0);
+			vertices.push_back(0);
+			vertices.push_back(1);
 		}
 	}
 
@@ -91,16 +157,11 @@ private:
 		glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
 
 		std::vector<GLfloat> vertices;
-		glm::vec3 voxel_size = glm::vec3(
-			this->voxelizer->get_side(),
-			this->voxelizer->get_side(),
-			this->voxelizer->get_side()
-		);
 
-		this->push_x_planes(vertices, voxel_size);
-		this->push_y_planes(vertices, voxel_size);
-		this->push_z_planes(vertices, voxel_size);
-		
+		this->push_x_planes(vertices, this->voxelizer->get_side());
+		this->push_y_planes(vertices, this->voxelizer->get_side());
+		this->push_z_planes(vertices, this->voxelizer->get_side());
+
 		this->vertices_count = vertices.size();
 		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(GLfloat), &vertices[0], GL_STATIC_DRAW);
 	}
@@ -159,7 +220,7 @@ public:
 
 		glDisable(GL_CULL_FACE);
 	}
-	
+
 	void on_update(PhaseManager* phase_manager, float delta)
 	{
 		this->viewer.on_update(phase_manager->get_window(), delta);
@@ -177,13 +238,8 @@ public:
 		glm::mat4 camera = this->viewer.get_camera().matrix();
 		glUniformMatrix4fv(this->program.get_uniform_location("u_camera"), 1, GL_FALSE, glm::value_ptr(camera));
 
-		// Voxel Size
-		glUniform3f(
-			this->program.get_uniform_location("u_voxel_size"),
-			this->voxelizer->get_side(),
-			this->voxelizer->get_side(),
-			this->voxelizer->get_side()
-		);
+		// Camera
+		glUniform1f(this->program.get_uniform_location("u_voxel_size"), 1 / (GLfloat) this->voxelizer->get_side());
 
 		// Voxel
 		GLuint voxel = this->voxelizer->get_voxel();
@@ -194,7 +250,10 @@ public:
 		glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
 
 		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), 0);
+
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
 
 		glDrawArrays(GL_QUADS, 0, this->vertices_count);
 	}
