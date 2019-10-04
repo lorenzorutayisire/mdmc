@@ -10,3 +10,7 @@ CMakeSettings.json
 graph_info.json
 out
 .vs
+
+# Custom python script
+mc_build
+mc_tmp
