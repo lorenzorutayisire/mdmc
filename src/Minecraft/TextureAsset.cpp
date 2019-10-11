@@ -53,10 +53,10 @@ uint32_t load_uint32_t(std::ifstream& file)
 void TextureAsset::load(std::ifstream& file)
 {
 	std::string mc_version;
-	std::getline(file, mc_version, '\0');
+	std::getline(file, mc_version, '\0'); // mc_version
 	std::cout << "MC version: " << mc_version << std::endl;
 
-	uint32_t blocks_count = load_uint32_t(file);
+	uint32_t blocks_count = load_uint32_t(file); // blocks_count
 	std::cout << "Blocks count: " << blocks_count << std::endl;
 
 	// textures init (16x16)
@@ -70,22 +70,19 @@ void TextureAsset::load(std::ifstream& file)
 	uint16_t layer = 0;
 
 	GLchar image_pixels[256 * 4];
-	while (blocks_count-- > 0)
+	while (file.peek() != EOF)
 	{
-		// block type (1)
-		uint8_t block_type;
-		file.read((char*)&block_type, 1);
+		file.ignore(1); // block_type
 
-		// namespace id (minecraft:stone)
 		std::string namespace_id;
-		std::getline(file, namespace_id, '\0');
+		std::getline(file, namespace_id, '\0'); // namespace_id
 
-		// block data (0)
-		uint8_t block_data;
-		file.read((char*)&block_data, 1);
+		std::cout << "Block ID: " << layer << std::endl;
+		std::cout << "Block: '" << namespace_id << "'" << std::endl;
 
-		// textures
-		file.read(image_pixels, 256 * 4);
+		file.ignore(1); // block_data
+
+		file.read(image_pixels, 16 * 16 * 4); // texture (16 * 16 * rgba)
 
 		glBindTexture(GL_TEXTURE_2D_ARRAY, this->textures);
 		glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, layer, 16, 16, 1, GL_RGBA, GL_UNSIGNED_BYTE, image_pixels);

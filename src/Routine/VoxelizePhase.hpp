@@ -260,7 +260,7 @@ public:
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); // TODO ?
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
@@ -289,7 +289,7 @@ public:
 		std::cout << "Scene voxelized" << std::endl;
 
 		// texture asset
-		std::ifstream texture_asset_file("resources/minecraft_assets/1.8.8.bin");
+		std::ifstream texture_asset_file("resources/minecraft_assets/1.8.8.bin", std::ios_base::binary);
 		if (errno)
 		{
 			std::cerr << strerror(errno) << std::endl;
