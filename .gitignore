@@ -14,3 +14,6 @@ out
 # Custom python script
 mc_build
 mc_tmp
+
+# Minecraft assets
+resources/minecraft_assets/*.bin

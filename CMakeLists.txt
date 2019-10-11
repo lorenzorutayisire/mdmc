@@ -15,38 +15,34 @@ add_executable (
 	
 	# Main
 	"src/Main.cpp"
-	
-	"src/VoxelStage.hpp"
-
-	"src/Voxelizer.hpp"
-	"src/Voxelizer.cpp"
-	
 	"src/Phase.hpp"
 	"src/PhaseManager.hpp"
+	"src/Voxelizer.hpp"
+	"src/Voxelizer.cpp"
 	
 	# Routine
 	"src/Routine/LoadingPhase.hpp"
 	"src/Routine/VisualizePhase.hpp"
 	"src/Routine/VoxelizePhase.hpp"
+	
+	# Minecraft
+	"src/Minecraft/TextureAsset.hpp"
+	"src/Minecraft/TextureAsset.cpp"
 
 	# GL
-	"src/GL/Mesh.hpp"
-	"src/GL/Mesh.cpp"
-
-	"src/GL/Scene.hpp"
-	"src/GL/Scene.cpp"
-	
-	"src/GL/Viewer.hpp"
-	"src/GL/Viewer.cpp"
-
 	"src/GL/Camera.hpp"
 	"src/GL/Camera.cpp"
-
-	"src/GL/Shader.hpp"
-	"src/GL/Shader.cpp"
-
+	"src/GL/Color.hpp"
+	"src/GL/Mesh.hpp"
+	"src/GL/Mesh.cpp"
 	"src/GL/Program.hpp"
 	"src/GL/Program.cpp"
+	"src/GL/Scene.hpp"
+	"src/GL/Scene.cpp"
+	"src/GL/Shader.hpp"
+	"src/GL/Shader.cpp"
+	"src/GL/Viewer.hpp"
+	"src/GL/Viewer.cpp"
 
 	#"src/Phases/LoadScenePhase.hpp"
 	#"src/Phases/LoadScenePhase.cpp"

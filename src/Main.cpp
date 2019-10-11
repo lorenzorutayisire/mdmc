@@ -9,6 +9,8 @@
 #include "PhaseManager.hpp"
 #include "Routine/LoadingPhase.hpp"
 
+#include "Minecraft/TextureAsset.hpp"
+
 int main()
 {
 	if (glfwInit() != GLFW_TRUE)
