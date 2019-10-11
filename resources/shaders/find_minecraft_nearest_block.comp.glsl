@@ -3,7 +3,7 @@
 layout(binding = 0, rgba32f) uniform image3D u_voxel;
 
 layout(binding = 1, rgba32f) uniform image2DArray u_minecraft_avg;
-layout(binding = 2, r8ui)    uniform uimage3D u_minecraft_blocks;
+layout(binding = 2, r32ui)   uniform uimage3D u_minecraft_blocks;
 
 uint find_nearest_minecraft_block(vec4 color)
 {

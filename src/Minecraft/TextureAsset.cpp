@@ -74,11 +74,10 @@ void TextureAsset::load(std::ifstream& file)
 	{
 		file.ignore(1); // block_type
 
-		std::string namespace_id;
-		std::getline(file, namespace_id, '\0'); // namespace_id
+		std::string namespaced_id;
+		std::getline(file, namespaced_id, '\0'); // namespace_id
 
-		std::cout << "Block ID: " << layer << std::endl;
-		std::cout << "Block: '" << namespace_id << "'" << std::endl;
+		std::cout << "ID: " << layer << " (" << namespaced_id << ")" << std::endl;
 
 		file.ignore(1); // block_data
 

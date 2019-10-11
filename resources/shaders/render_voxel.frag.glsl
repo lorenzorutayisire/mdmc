@@ -8,7 +8,7 @@ uniform uint u_color_mode;
 uniform float u_voxel_size;
 
 layout(binding = 0) uniform sampler3D u_voxel;
-layout(binding = 1, r8ui) uniform uimage3D u_minecraft_blocks;
+layout(binding = 1, r32ui) uniform uimage3D u_minecraft_blocks;
 
 layout(binding = 2) uniform sampler2DArray u_minecraft_avg;
 layout(binding = 3) uniform sampler2DArray u_minecraft_textures;
@@ -74,7 +74,7 @@ void main()
 	case 2:
 		gl_FragColor = get_minecraft_texture_color();
 		break;
-	default:
+	default: // 0
 		gl_FragColor = get_scene3d_color();
 		break;
 	}

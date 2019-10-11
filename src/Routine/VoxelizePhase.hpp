@@ -240,9 +240,9 @@ public:
 		// (x, y, z) -> block_id
 
 		glGenTextures(1, &this->minecraft_blocks);
-
-		glActiveTexture(GL_TEXTURE2);
 		glBindTexture(GL_TEXTURE_3D, this->minecraft_blocks);
+
+		glObjectLabel(GL_TEXTURE, this->minecraft_blocks, -1, "Minecraft Textures");
 
 		glTexImage3D(
 			GL_TEXTURE_3D,
@@ -264,6 +264,7 @@ public:
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
+		glActiveTexture(GL_TEXTURE2);
 		glBindImageTexture(2, this->minecraft_blocks, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
 
 		glDispatchCompute(
@@ -271,6 +272,8 @@ public:
 			this->voxelizer->get_side(),
 			this->voxelizer->get_side()
 		);
+
+		std::cout << "minecraft_blocks: " << this->voxelizer->get_side() << "^3" << std::endl;
 
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 	}
