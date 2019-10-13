@@ -26,12 +26,10 @@ private:
 
 	GLuint minecraft_blocks;
 
-	void push_x_planes(std::vector<GLfloat>& vertices, uint16_t side)
+	void push_x_planes(std::vector<GLfloat>& vertices, uint32_t side)
 	{
-		for (GLfloat i = 0; i <= side; i++)
+		for (uint32_t x = 0; x <= side; x++)
 		{
-			float x = i / (GLfloat) side;
-
 			// v0
 			vertices.push_back(x);
 			vertices.push_back(0);
@@ -43,7 +41,7 @@ private:
 
 			// v1
 			vertices.push_back(x);
-			vertices.push_back(1);
+			vertices.push_back(side);
 			vertices.push_back(0);
 
 			vertices.push_back(1);
@@ -52,8 +50,8 @@ private:
 
 			// v2
 			vertices.push_back(x);
-			vertices.push_back(1);
-			vertices.push_back(1);
+			vertices.push_back(side);
+			vertices.push_back(side);
 
 			vertices.push_back(1);
 			vertices.push_back(0);
@@ -62,7 +60,7 @@ private:
 			// v3
 			vertices.push_back(x);
 			vertices.push_back(0);
-			vertices.push_back(1);
+			vertices.push_back(side);
 
 			vertices.push_back(1);
 			vertices.push_back(0);
@@ -70,12 +68,10 @@ private:
 		}
 	}
 
-	void push_y_planes(std::vector<GLfloat>& vertices, uint16_t side)
+	void push_y_planes(std::vector<GLfloat>& vertices, uint32_t side)
 	{
-		for (GLfloat i = 0; i <= side; i++)
+		for (uint32_t y = 0; y <= side; y++)
 		{
-			float y = i / (GLfloat) side;
-
 			// v0
 			vertices.push_back(0);
 			vertices.push_back(y);
@@ -86,7 +82,7 @@ private:
 			vertices.push_back(0);
 
 			// v1
-			vertices.push_back(1);
+			vertices.push_back(side);
 			vertices.push_back(y);
 			vertices.push_back(0);
 
@@ -95,9 +91,9 @@ private:
 			vertices.push_back(0);
 
 			// v2
-			vertices.push_back(1);
+			vertices.push_back(side);
 			vertices.push_back(y);
-			vertices.push_back(1);
+			vertices.push_back(side);
 
 			vertices.push_back(0);
 			vertices.push_back(1);
@@ -106,7 +102,7 @@ private:
 			// v3
 			vertices.push_back(0);
 			vertices.push_back(y);
-			vertices.push_back(1);
+			vertices.push_back(side);
 
 			vertices.push_back(0);
 			vertices.push_back(1);
@@ -114,12 +110,10 @@ private:
 		}
 	}
 
-	void push_z_planes(std::vector<GLfloat>& vertices, uint16_t side)
+	void push_z_planes(std::vector<GLfloat>& vertices, uint32_t side)
 	{
-		for (GLfloat i = 0; i <= side; i++)
+		for (uint32_t z = 0; z <= side; z++)
 		{
-			float z = i / (GLfloat) side;
-
 			// v0
 			vertices.push_back(0);
 			vertices.push_back(0);
@@ -130,7 +124,7 @@ private:
 			vertices.push_back(1);
 
 			// v1
-			vertices.push_back(1);
+			vertices.push_back(side);
 			vertices.push_back(0);
 			vertices.push_back(z);
 
@@ -139,8 +133,8 @@ private:
 			vertices.push_back(1);
 
 			// v2
-			vertices.push_back(1);
-			vertices.push_back(1);
+			vertices.push_back(side);
+			vertices.push_back(side);
 			vertices.push_back(z);
 
 			vertices.push_back(0);
@@ -149,7 +143,7 @@ private:
 
 			// v3
 			vertices.push_back(0);
-			vertices.push_back(1);
+			vertices.push_back(side);
 			vertices.push_back(z);
 
 			vertices.push_back(0);

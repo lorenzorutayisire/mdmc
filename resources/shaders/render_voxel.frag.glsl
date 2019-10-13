@@ -15,20 +15,18 @@ layout(binding = 3) uniform sampler2DArray u_minecraft_textures;
 
 vec4 get_voxel_color()
 {
-	vec3 before = v_tex_coord - v_normal / (2 * u_voxel_size);
-	vec3 after = v_tex_coord + v_normal / (2 * u_voxel_size);
+	vec3 before = (v_tex_coord - v_normal / 2) / u_voxel_size;
+	vec3 after = (v_tex_coord + v_normal / 2) / u_voxel_size;
 
 	vec4 before_color = texture(u_voxel, before);
 	vec4 after_color = texture(u_voxel, after);
 
-	if (before_color.a == 0 && after_color.a == 0)
-		discard;
-
 	if (before_color.a == 0)
 		return after_color;
-	
 	if (after_color.a == 0)
 		return before_color;
+	else
+		return vec4(0);
 }
 
 //
@@ -37,8 +35,8 @@ vec4 get_voxel_color()
 //
 uint get_minecraft_block_id()
 {
-	ivec3 prev_block_coord = ivec3(v_tex_coord * u_voxel_size - v_normal / 2);
-	ivec3 next_block_coord = ivec3(v_tex_coord * u_voxel_size + v_normal / 2);
+	ivec3 prev_block_coord = ivec3(v_tex_coord - v_normal / 2);
+	ivec3 next_block_coord = ivec3(v_tex_coord + v_normal / 2);
 
 	uint prev_block_id = imageLoad(u_minecraft_blocks, prev_block_coord).r;
 	uint next_block_id = imageLoad(u_minecraft_blocks, next_block_coord).r;
@@ -68,7 +66,17 @@ vec4 get_minecraft_avg_color()
 //
 vec4 get_minecraft_texture_color()
 {
-	return texture(u_minecraft_textures, v_tex_coord);
+	uint block_id = get_minecraft_block_id();
+	vec2 tex_coord;
+
+	if (v_normal.x > 0)
+		tex_coord = v_tex_coord.yz;
+	else if (v_normal.y > 0)
+		tex_coord = v_tex_coord.xz;
+	else // (v_normal.z > 0)
+		tex_coord = v_tex_coord.xy;
+
+	return texture(u_minecraft_textures, vec3(tex_coord - floor(tex_coord), block_id));
 }
 
 void main()
