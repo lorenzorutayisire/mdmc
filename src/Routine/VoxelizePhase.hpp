@@ -215,11 +215,17 @@ public:
 
 		Shader compute_shader(GL_COMPUTE_SHADER);
 		compute_shader.source_from_file("resources/shaders/find_minecraft_nearest_block.comp.glsl");
-		compute_shader.compile();
-
+		if (!compute_shader.compile())
+		{
+			std::cerr << compute_shader.get_log() << std::endl;
+			throw;
+		}
 		compute_program.attach(compute_shader);
-		compute_program.link();
-
+		if (!compute_program.link())
+		{
+			std::cerr << compute_program.get_log() << std::endl;
+			throw;
+		}
 		compute_program.use();
 
 		// voxel
@@ -229,7 +235,7 @@ public:
 		glBindTexture(GL_TEXTURE_3D, this->voxelizer->get_voxel());
 		glBindImageTexture(0, this->voxelizer->get_voxel(), 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA32F);
 
-		// textures_averages
+		// textures_avg
 		// block_id -> (avg.r, avg.g, avg.b, avg.a)
 
 		glActiveTexture(GL_TEXTURE1);
@@ -239,23 +245,12 @@ public:
 		// minecraft_blocks
 		// (x, y, z) -> block_id
 
+		uint16_t side = this->voxelizer->get_side();
+
 		glGenTextures(1, &this->minecraft_blocks);
 		glBindTexture(GL_TEXTURE_3D, this->minecraft_blocks);
 
-		glObjectLabel(GL_TEXTURE, this->minecraft_blocks, -1, "Minecraft Textures");
-
-		glTexImage3D(
-			GL_TEXTURE_3D,
-			0,
-			GL_R32UI,
-			this->voxelizer->get_side(),
-			this->voxelizer->get_side(),
-			this->voxelizer->get_side(),
-			0,
-			GL_R,
-			GL_UNSIGNED_INT,
-			NULL
-		);
+		glTexStorage3D(GL_TEXTURE_3D, 1, GL_R32UI, side, side, side);
 
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -267,15 +262,11 @@ public:
 		glActiveTexture(GL_TEXTURE2);
 		glBindImageTexture(2, this->minecraft_blocks, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
 
-		glDispatchCompute(
-			this->voxelizer->get_side(),
-			this->voxelizer->get_side(),
-			this->voxelizer->get_side()
-		);
-
-		std::cout << "minecraft_blocks: " << this->voxelizer->get_side() << "^3" << std::endl;
+		glDispatchCompute(side, side, side);
 
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+		std::cout << "MC blocks computing finished" << std::endl;
 	}
 
 	void on_enable(PhaseManager* phase_manager)
@@ -318,7 +309,7 @@ public:
 		if (this->color_mode != color_mode)
 		{
 			this->color_mode = color_mode;
-			std::cout << "Color mode: " << this->color_mode << std::endl;
+			std::cout << "Color mode: " << (int) this->color_mode << std::endl;
 		}
 	}
 
@@ -346,7 +337,7 @@ public:
 		glUniformMatrix4fv(this->program.get_uniform_location("u_camera"), 1, GL_FALSE, glm::value_ptr(camera));
 
 		// voxel_size
-		glUniform1f(this->program.get_uniform_location("u_voxel_size"), 1 / (GLfloat) this->voxelizer->get_side());
+		glUniform1f(this->program.get_uniform_location("u_voxel_size"), this->voxelizer->get_side());
 
 		// camera_mode
 		glUniform1ui(this->program.get_uniform_location("u_color_mode"), this->color_mode);

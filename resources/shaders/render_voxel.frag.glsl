@@ -1,7 +1,7 @@
 #version 430
 
 in vec3 v_tex_coord;
-in vec3 v_normal;
+flat in vec3 v_normal;
 
 uniform uint u_color_mode;
 
@@ -13,13 +13,13 @@ layout(binding = 1, r32ui) uniform uimage3D u_minecraft_blocks;
 layout(binding = 2) uniform sampler2DArray u_minecraft_avg;
 layout(binding = 3) uniform sampler2DArray u_minecraft_textures;
 
-vec4 get_texture3d_color(sampler3D texture3d)
+vec4 get_voxel_color()
 {
-	vec3 before = v_tex_coord - v_normal * (u_voxel_size / 2);
-	vec3 after = v_tex_coord + v_normal * (u_voxel_size / 2);
+	vec3 before = v_tex_coord - v_normal / (2 * u_voxel_size);
+	vec3 after = v_tex_coord + v_normal / (2 * u_voxel_size);
 
-	vec4 before_color = texture(texture3d, before);
-	vec4 after_color = texture(texture3d, after);
+	vec4 before_color = texture(u_voxel, before);
+	vec4 after_color = texture(u_voxel, after);
 
 	if (before_color.a == 0 && after_color.a == 0)
 		discard;
@@ -31,34 +31,41 @@ vec4 get_texture3d_color(sampler3D texture3d)
 		return before_color;
 }
 
-vec4 get_scene3d_color()
+//
+// Gets minecraft block id based on the coords of the current vertex.
+// If the next block is 0 then the current block has to be shown.
+//
+uint get_minecraft_block_id()
 {
-	return get_texture3d_color(u_voxel);
+	ivec3 prev_block_coord = ivec3(v_tex_coord * u_voxel_size - v_normal / 2);
+	ivec3 next_block_coord = ivec3(v_tex_coord * u_voxel_size + v_normal / 2);
+
+	uint prev_block_id = imageLoad(u_minecraft_blocks, prev_block_coord).r;
+	uint next_block_id = imageLoad(u_minecraft_blocks, next_block_coord).r;
+
+	if (prev_block_id == 0)
+	{
+		return next_block_id;
+	}
+	if (next_block_id == 0)
+	{
+		return prev_block_id;
+	}
 }
 
-uint get_minecraft_block()
-{
-	ivec3 before = ivec3(v_tex_coord - v_normal / 2);
-	ivec3 after = ivec3(v_tex_coord + v_normal / 2);
-
-	uint prev_block = imageLoad(u_minecraft_blocks, before).r;
-	uint next_block = imageLoad(u_minecraft_blocks, after).r;
-
-	if (prev_block == 0 && next_block == 0)
-		discard;
-
-	if (prev_block == 0)
-		return next_block;
-
-	if (next_block == 0)
-		return prev_block;
-}
-
+//
+// Using the block id retrieved, gets the avg color of the fragment.
+//
 vec4 get_minecraft_avg_color()
 {
-	return texture(u_minecraft_avg, vec3(0, 0, get_minecraft_block()));
+	uint block_id = get_minecraft_block_id();
+	return texture(u_minecraft_avg, vec3(0, 0, block_id));
 }
 
+//
+// Using the block id retrieved, maps the texture of this fragment.
+// TODO
+//
 vec4 get_minecraft_texture_color()
 {
 	return texture(u_minecraft_textures, v_tex_coord);
@@ -66,16 +73,22 @@ vec4 get_minecraft_texture_color()
 
 void main()
 {
+	vec4 color;
 	switch (u_color_mode)
 	{
-	case 1:
-		gl_FragColor = get_minecraft_avg_color();
+	default: // KEY_1
+		color = get_voxel_color();
 		break;
-	case 2:
-		gl_FragColor = get_minecraft_texture_color();
+	case 1: // KEY_2
+		color = get_minecraft_avg_color();
 		break;
-	default: // 0
-		gl_FragColor = get_scene3d_color();
+	case 2: // KEY_3
+		color = get_minecraft_texture_color();
 		break;
 	}
+	if (color.a == 0)
+	{
+		discard;
+	}
+	gl_FragColor = color;
 }

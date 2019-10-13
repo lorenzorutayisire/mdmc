@@ -7,7 +7,7 @@ uniform mat4 u_transform;
 uniform mat4 u_camera;
 
 out vec3 v_tex_coord;
-out vec3 v_normal;
+flat out vec3 v_normal;
 
 void main()
 {

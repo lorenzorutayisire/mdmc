@@ -32,10 +32,10 @@ iColor TextureAsset::color_average_rgba(GLchar* image_data, size_t image_size)
 	}
 
 	return {
-		(uint8_t) (r / (float_t) image_size),
-		(uint8_t) (g / (float_t) image_size),
-		(uint8_t) (b / (float_t) image_size),
-		(uint8_t) (a / (float_t) image_size)
+		(uint8_t)(r / (float_t) image_size),
+		(uint8_t)(g / (float_t) image_size),
+		(uint8_t)(b / (float_t) image_size),
+		(uint8_t)(a / (float_t) image_size)
 	};
 }
 
@@ -61,13 +61,13 @@ void TextureAsset::load(std::ifstream& file)
 
 	// textures init (16x16)
 	glBindTexture(GL_TEXTURE_2D_ARRAY, this->textures);
-	glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RGBA8, 16, 16, blocks_count);
+	glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RGBA8, 16, 16, blocks_count + 1);
 
 	// texture_averages init (1x1)
 	glBindTexture(GL_TEXTURE_2D_ARRAY, this->textures_averages);
-	glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RGBA8, 1, 1, blocks_count);
+	glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RGBA8, 1, 1, blocks_count + 1);
 
-	uint16_t layer = 0;
+	uint16_t layer = 1;
 
 	GLchar image_pixels[256 * 4];
 	while (file.peek() != EOF)
@@ -94,7 +94,7 @@ void TextureAsset::load(std::ifstream& file)
 
 		// averages
 		iColor average = this->color_average_rgba(image_pixels, 256);
-		GLchar average_pixels[4] = { average.r, average.g, average.b, average.a };
+		GLubyte average_pixels[4] = { average.r, average.g, average.b, average.a };
 
 		glBindTexture(GL_TEXTURE_2D_ARRAY, this->textures_averages);
 		glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, layer, 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, average_pixels);
