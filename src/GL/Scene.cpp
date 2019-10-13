@@ -46,9 +46,6 @@ void Scene::load(const std::string path)
 		throw;
 	}
 
-	Mesh m_a;
-	Mesh m_b = m_a;
-
 	this->min_vertex = glm::vec3(0);
 	this->max_vertex = glm::vec3(0);
 

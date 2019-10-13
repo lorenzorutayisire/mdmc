@@ -110,7 +110,7 @@ void Voxelizer::voxelize()
 	glUniformMatrix4fv(this->program.get_uniform_location("u_z_ortho_projection"), 1, GL_FALSE, glm::value_ptr(this->z_ortho_projection));
 
 	// Voxel Size
-	glUniform3i(this->program.get_uniform_location("u_voxel_size"), this->side, this->side, this->side);
+	glUniform1f(this->program.get_uniform_location("u_voxel_size"), this->side);
 
 	// Voxel
 	glActiveTexture(GL_TEXTURE5);

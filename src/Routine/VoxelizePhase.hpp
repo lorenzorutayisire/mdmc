@@ -277,7 +277,7 @@ public:
 		std::cout << "Scene voxelized" << std::endl;
 
 		// texture asset
-		std::ifstream texture_asset_file("resources/minecraft_assets/1.8.8.bin", std::ios_base::binary);
+		std::ifstream texture_asset_file("resources/minecraft_assets/1.14.4.bin", std::ios_base::binary);
 		if (errno)
 		{
 			std::cerr << strerror(errno) << std::endl;

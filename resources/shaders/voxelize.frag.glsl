@@ -1,19 +1,23 @@
 # version 430
 
-flat in int g_axis;
-
 in vec3 g_position;
 in vec2 g_tex_coord;
+
+flat in int g_axis;
+flat in vec4 g_aabb;
 
 uniform vec4 u_color;
 layout(binding = 0) uniform sampler2D u_texture2d;
 
 layout(location = 5, binding = 5, rgba32f) uniform image3D u_voxel;
-layout(location = 2) uniform ivec3 u_voxel_size;
+layout(location = 2) uniform float u_voxel_size;
 
 void main()
 {
-	ivec3 position = ivec3(gl_FragCoord.xy, gl_FragCoord.z * u_voxel_size.z);
+    if (g_position.x < g_aabb.x || g_position.y < g_aabb.y || g_position.x > g_aabb.z || g_position.y > g_aabb.w)
+	   discard;
+
+	ivec3 position = ivec3(gl_FragCoord.xy, gl_FragCoord.z * u_voxel_size);
 
 	switch (g_axis)
 	{
@@ -25,7 +29,7 @@ void main()
 		break;
 	case 2: // Z
 		position.xy = position.xy;
-		position.z = u_voxel_size.z - position.z;
+		position.z = int(u_voxel_size) - position.z;
 		break;
 	}
 
