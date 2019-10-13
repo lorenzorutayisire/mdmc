@@ -16,7 +16,7 @@ private:
 public:
 	TextureAsset();
 
-	iColor color_average_rgba(GLchar *image_data, size_t image_size);
+	iColor color_average_rgba(char* image_data, size_t image_size);
 
 	GLuint get_textures();
 	GLuint get_textures_averages();

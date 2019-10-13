@@ -19,23 +19,31 @@ GLuint TextureAsset::get_textures_averages()
 	return this->textures_averages;
 }
 
-iColor TextureAsset::color_average_rgba(GLchar* image_data, size_t image_size)
+iColor TextureAsset::color_average_rgba(char* image_data, size_t image_size)
 {
+	// https://sighack.com/post/averaging-rgb-colors-the-right-way
+
 	uint32_t r = 0, g = 0, b = 0, a = 0;
 
 	for (uint32_t i = 0; i < image_size * 4; i += 4)
 	{
-		r += image_data[i];
-		g += image_data[i + 1];
-		b += image_data[i + 2];
-		a += image_data[i + 3];
+		uint8_t
+			ur = image_data[i + 0],
+			ug = image_data[i + 1],
+			ub = image_data[i + 2],
+			ua = image_data[i + 3];
+
+		r += ur * ur;
+		g += ug * ug;
+		b += ub * ub;
+		a += ua * ua;
 	}
 
 	return {
-		(uint8_t)(r / (float_t) image_size),
-		(uint8_t)(g / (float_t) image_size),
-		(uint8_t)(b / (float_t) image_size),
-		(uint8_t)(a / (float_t) image_size)
+		(uint8_t) sqrt(r / image_size),
+		(uint8_t) sqrt(g / image_size),
+		(uint8_t) sqrt(b / image_size),
+		(uint8_t) sqrt(a / image_size)
 	};
 }
 
@@ -69,7 +77,6 @@ void TextureAsset::load(std::ifstream& file)
 
 	uint16_t layer = 1;
 
-	GLchar image_pixels[256 * 4];
 	while (file.peek() != EOF)
 	{
 		file.ignore(1); // block_type
@@ -81,10 +88,13 @@ void TextureAsset::load(std::ifstream& file)
 
 		file.ignore(1); // block_data
 
+		char image_pixels[256 * 4];
 		file.read(image_pixels, 16 * 16 * 4); // texture (16 * 16 * rgba)
 
 		glBindTexture(GL_TEXTURE_2D_ARRAY, this->textures);
 		glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, layer, 16, 16, 1, GL_RGBA, GL_UNSIGNED_BYTE, image_pixels);
+
+		glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
 
 		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -94,7 +104,7 @@ void TextureAsset::load(std::ifstream& file)
 
 		// averages
 		iColor average = this->color_average_rgba(image_pixels, 256);
-		GLubyte average_pixels[4] = { average.r, average.g, average.b, average.a };
+		uint8_t average_pixels[4] = { average.r, average.g, average.b, average.a };
 
 		glBindTexture(GL_TEXTURE_2D_ARRAY, this->textures_averages);
 		glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, layer, 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, average_pixels);
