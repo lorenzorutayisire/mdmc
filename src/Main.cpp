@@ -26,8 +26,41 @@ MessageCallback(GLenum source,
 }
 
 
-int main()
+int main(int argc, char** argv)
 {
+	if (argc != (1 + 3)) // The first is the name of the exec.
+	{
+		std::cerr << "Wrong arguments: <model_path> <height> <minecraft_version>" << std::endl;
+		return 1;
+	}
+
+	/* Model path */
+	const std::string model_path = argv[1];
+	std::ifstream model_file(model_path);
+	if (!model_file.good())
+	{
+		std::cerr << "Can't open file at: " << model_path << std::endl;
+		return 2;
+	}
+
+	/* Height */
+	const int raw_height = atoi(argv[2]);
+	if (raw_height < 0 || raw_height > 256)
+	{
+		std::cerr << "A Minecraft schematic can't be taller than 256 blocks, negative or 0." << std::endl;
+		return 3;
+	}
+	const uint16_t height = (uint16_t)raw_height;
+
+	/* Minecraft version */
+	const std::string minecraft_version = argv[3];
+	std::ifstream minecraft_asset_file("resources/minecraft_assets/" + minecraft_version + ".bin");
+	if (!minecraft_asset_file.good())
+	{
+		std::cerr << "Unsupported Minecraft version: " + minecraft_version + ".";
+		return 4;
+	}
+
 	if (glfwInit() != GLFW_TRUE)
 	{
 		std::cerr << "Failed to initialize GLFW." << std::endl;
@@ -35,7 +68,7 @@ int main()
 	}
 	std::cout << "GLFW initialized." << std::endl;
 
-	GLFWwindow *window = glfwCreateWindow(512, 512, "Hello world", NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(512, 512, "Hello world", NULL, NULL);
 	glfwMakeContextCurrent(window);
 
 	//glfwWindowHint(GLFW_SAMPLES, 4); // 4x antialiasing
@@ -64,7 +97,7 @@ int main()
 
 	PhaseManager phase_manager(window);
 
-	phase_manager.set_phase(new LoadingPhase("resources/skull/12140_Skull_v3_L2.obj"));
+	phase_manager.set_phase(new LoadingPhase(model_path.c_str()));
 
 	while (!glfwWindowShouldClose(window))
 	{
