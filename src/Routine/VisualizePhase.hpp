@@ -27,6 +27,8 @@ private:
 	Program program;
 	Viewer viewer;
 
+	std::istream* minecraft_asset_file;
+
 	char camera_mode;
 
 	void create_program()
@@ -57,9 +59,10 @@ private:
 	}
 
 public:
-	VisualizePhase(Scene* scene)
+	VisualizePhase(Scene* scene, uint16_t height, std::istream& minecraft_asset_file)
 	{
-		this->voxelizer = std::make_shared<Voxelizer>(Voxelizer(*scene, 64));
+		this->voxelizer = std::make_shared<Voxelizer>(Voxelizer(*scene, height));
+		this->minecraft_asset_file = &minecraft_asset_file;
 		this->camera_mode = 'c';
 	}
 
@@ -97,7 +100,7 @@ public:
 
 		if (glfwGetKey(phase_manager->get_window(), GLFW_KEY_ENTER) == GLFW_PRESS)
 		{
-			phase_manager->set_phase(new VoxelizePhase(this->voxelizer));
+			phase_manager->set_phase(new VoxelizePhase(this->voxelizer, *minecraft_asset_file));
 		}
 	}
 

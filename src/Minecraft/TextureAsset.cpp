@@ -47,7 +47,7 @@ iColor TextureAsset::color_average_rgba(char* image_data, size_t image_size)
 	};
 }
 
-uint32_t load_uint32_t(std::ifstream& file)
+uint32_t load_uint32_t(std::istream& file)
 {
 	uint8_t blocks_count[4];
 	file.read((char*)&blocks_count, 4);
@@ -58,7 +58,7 @@ uint32_t load_uint32_t(std::ifstream& file)
 		((uint32_t)blocks_count[3]);
 }
 
-void TextureAsset::load(std::ifstream& file)
+void TextureAsset::load(std::istream& file)
 {
 	std::string mc_version;
 	std::getline(file, mc_version, '\0'); // mc_version

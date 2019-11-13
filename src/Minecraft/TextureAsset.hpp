@@ -21,5 +21,5 @@ public:
 	GLuint get_textures();
 	GLuint get_textures_averages();
 
-	void load(std::ifstream& file);
+	void load(std::istream& file);
 };

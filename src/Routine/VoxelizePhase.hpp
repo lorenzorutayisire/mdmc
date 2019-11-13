@@ -197,10 +197,14 @@ private:
 		}
 	}
 
+	std::istream* minecraft_asset_file;
+
 public:
-	VoxelizePhase(std::shared_ptr<Voxelizer> voxelizer) :
+
+	VoxelizePhase(std::shared_ptr<Voxelizer> voxelizer, std::istream& minecraft_asset_file) :
 		voxelizer(voxelizer)
 	{
+		this->minecraft_asset_file = &minecraft_asset_file;
 	}
 
 	void compute_minecraft_blocks()
@@ -277,13 +281,7 @@ public:
 		std::cout << "Scene voxelized" << std::endl;
 
 		// texture asset
-		std::ifstream texture_asset_file("resources/minecraft_assets/1.14.4.bin", std::ios_base::binary);
-		if (errno)
-		{
-			std::cerr << strerror(errno) << std::endl;
-			throw;
-		}
-		this->texture_asset.load(texture_asset_file);
+		this->texture_asset.load(*this->minecraft_asset_file);
 		std::cout << "Minecraft texture asset loaded" << std::endl;
 
 		// compute minecraft blocks

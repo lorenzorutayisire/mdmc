@@ -28,13 +28,16 @@ MessageCallback(GLenum source,
 
 int main(int argc, char** argv)
 {
+	/* ARGS */
+	// Gets from the command-line the required arguments.
+
 	if (argc != (1 + 3)) // The first is the name of the exec.
 	{
 		std::cerr << "Wrong arguments: <model_path> <height> <minecraft_version>" << std::endl;
 		return 1;
 	}
 
-	/* Model path */
+	// <model_path>
 	const std::string model_path = argv[1];
 	std::ifstream model_file(model_path);
 	if (!model_file.good())
@@ -43,62 +46,75 @@ int main(int argc, char** argv)
 		return 2;
 	}
 
-	/* Height */
+	// <height>
 	const int raw_height = atoi(argv[2]);
-	if (raw_height < 0 || raw_height > 256)
+
+#ifndef UNLIMITED_HEIGHT
+	if (raw_height > 256)
 	{
-		std::cerr << "A Minecraft schematic can't be taller than 256 blocks, negative or 0." << std::endl;
+		std::cerr << "A Minecraft schematic can't be taller than 256 blocks." << std::endl;
 		return 3;
 	}
+#endif
+	if (raw_height <= 0)
+	{
+		std::cerr << "A Minecraft schematic can't be negative or 0." << std::endl;
+		return 3;
+	}
+	
 	const uint16_t height = (uint16_t)raw_height;
 
-	/* Minecraft version */
+	// <minecraft_version>
 	const std::string minecraft_version = argv[3];
-	std::ifstream minecraft_asset_file("resources/minecraft_assets/" + minecraft_version + ".bin");
+	std::ifstream minecraft_asset_file("resources/minecraft_assets/" + minecraft_version + ".bin", std::ios::binary);
 	if (!minecraft_asset_file.good())
 	{
 		std::cerr << "Unsupported Minecraft version: " + minecraft_version + ".";
 		return 4;
 	}
 
+	/* INIT */
+	// Initializes GLFW & GLEW stuff.
+
 	if (glfwInit() != GLFW_TRUE)
 	{
-		std::cerr << "Failed to initialize GLFW." << std::endl;
-		throw;
+		std::cerr << "GLFW failed to initialize." << std::endl;
+		return 5;
 	}
-	std::cout << "GLFW initialized." << std::endl;
 
 	GLFWwindow* window = glfwCreateWindow(512, 512, "Hello world", NULL, NULL);
-	glfwMakeContextCurrent(window);
 
-	//glfwWindowHint(GLFW_SAMPLES, 4); // 4x antialiasing
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4); // We want OpenGL 3.3
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
-	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE); // To make MacOS happy; should not be needed
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // We don't want the old OpenGL 
-	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE); // We don't want the old OpenGL 
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4); // OpenGL 4.2 required to run Image load/store extension.
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+
+	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE); // To make MacOS happy, should not be needed.
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // We don't want the old OpenGL. 
+	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
+
+	glfwMakeContextCurrent(window);
 
 	glewExperimental = GL_TRUE;
 	if (glewInit() != GLEW_OK)
 	{
-		std::cerr << "Failed to initialize GLEW." << std::endl;
-		throw;
+		std::cerr << "GLEW failed to initialize." << std::endl;
+		return 6;
 	}
-	std::cout << "GLEW initialized." << std::endl;
 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_ALPHA_TEST);
 	glEnable(GL_TEXTURE_3D);
 
-	glEnable(GL_DEBUG_OUTPUT);
+	glEnable(GL_DEBUG_OUTPUT); // Enables OpenGL warning & error logging.
 	glDebugMessageCallback(MessageCallback, 0);
 
-	glfwShowWindow(window);
+	glfwShowWindow(window); // Now the window can be shown.
+
+	/* LOADING */
 
 	PhaseManager phase_manager(window);
 
-	phase_manager.set_phase(new LoadingPhase(model_path.c_str()));
-
+	phase_manager.set_phase(new LoadingPhase(model_path.c_str(), height, minecraft_asset_file));
+	
 	while (!glfwWindowShouldClose(window))
 	{
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
