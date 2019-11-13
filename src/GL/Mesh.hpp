@@ -42,11 +42,11 @@ public:
 	void load_color(aiMaterial* ai_material);
 	void load_material(const std::string folder, aiMaterial* ai_material);
 
-	void load_vbo(aiMesh* ai_mesh);
+	void load_vbo(aiMesh* ai_mesh, aiMatrix4x4 transform);
 	void load_ebo(aiMesh* ai_mesh);
-	void load_mesh(aiMesh* ai_mesh);
+	void load_mesh(aiMesh* ai_mesh, aiMatrix4x4 transform);
 
-	void load(std::string folder, aiMesh* aiMesh, aiMaterial* ai_material);
+	void load(std::string folder, aiMesh* aiMesh, aiMaterial* ai_material, aiMatrix4x4 transform);
 
 	void render();
 

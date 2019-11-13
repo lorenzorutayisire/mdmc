@@ -89,7 +89,7 @@ void Mesh::test_max_vertex(aiVector3D vertex)
 	this->max_vertex.z = (this->max_vertex.z > vertex.z) ? this->max_vertex.z : vertex.z;
 }
 
-void Mesh::load_vbo(aiMesh* ai_mesh)
+void Mesh::load_vbo(aiMesh* ai_mesh, aiMatrix4x4 transform)
 {
 	this->min_vertex = glm::vec3(0, 0, 0);
 	this->max_vertex = glm::vec3(0, 0, 0);
@@ -100,7 +100,7 @@ void Mesh::load_vbo(aiMesh* ai_mesh)
 		aiVector3D vector3d;
 
 		// Position
-		vector3d = ai_mesh->mVertices[i];
+		vector3d = transform * ai_mesh->mVertices[i];
 		vertices.push_back(vector3d.x);
 		vertices.push_back(vector3d.y);
 		vertices.push_back(vector3d.z);
@@ -160,12 +160,12 @@ void Mesh::load_ebo(aiMesh* ai_mesh)
 	std::cout << "Elements: " << this->elements_count << std::endl;
 }
 
-void Mesh::load_mesh(aiMesh* ai_mesh)
+void Mesh::load_mesh(aiMesh* ai_mesh, aiMatrix4x4 transform)
 {
 	glGenVertexArrays(1, &this->vao);
 	glBindVertexArray(this->vao);
 
-	this->load_vbo(ai_mesh);
+	this->load_vbo(ai_mesh, transform);
 	this->load_ebo(ai_mesh);
 
 	glEnableVertexAttribArray(0);
@@ -180,9 +180,9 @@ void Mesh::load_mesh(aiMesh* ai_mesh)
 	glBindVertexArray(0);
 }
 
-void Mesh::load(std::string folder, aiMesh* ai_mesh, aiMaterial* ai_material)
+void Mesh::load(std::string folder, aiMesh* ai_mesh, aiMaterial* ai_material, aiMatrix4x4 transform)
 {
-	this->load_mesh(ai_mesh);
+	this->load_mesh(ai_mesh, transform);
 	this->load_material(folder, ai_material);
 }
 

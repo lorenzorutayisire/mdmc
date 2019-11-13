@@ -36,6 +36,30 @@ std::vector<Mesh>& Scene::get_meshes()
 	return this->meshes;
 }
 
+void Scene::load_node(const std::string folder, const aiScene& ai_scene, aiNode& ai_node, aiMatrix4x4 ai_transform)
+{
+	ai_transform *= ai_node.mTransformation;
+
+	for (size_t i = 0; i < ai_node.mNumMeshes; i++)
+	{
+		aiMesh* ai_mesh = ai_scene.mMeshes[ai_node.mMeshes[i]];
+		aiMaterial* ai_material = ai_scene.mMaterials[ai_mesh->mMaterialIndex];
+
+		Mesh mesh;
+		mesh.load(folder, ai_mesh, ai_material, ai_transform);
+
+		this->test_min_vertex(mesh);
+		this->test_max_vertex(mesh);
+
+		this->meshes.push_back(mesh);
+	}
+
+	for (size_t i = 0; i < ai_node.mNumChildren; i++)
+	{
+		this->load_node(folder, ai_scene, *ai_node.mChildren[i], ai_transform);
+	}
+}
+
 void Scene::load(const std::string path)
 {
 	Assimp::Importer importer;
@@ -51,23 +75,7 @@ void Scene::load(const std::string path)
 
 	std::string folder = path.substr(0, path.find_last_of("/\\"));
 
-
-	for (uint32_t i = 0; i < ai_scene->mNumMeshes; i++)
-	{
-		aiMesh* ai_mesh = ai_scene->mMeshes[i];
-		aiMaterial* ai_material = ai_scene->mMaterials[ai_mesh->mMaterialIndex];
-
-		Mesh mesh;
-
-		mesh.load(folder, ai_mesh, ai_material);
-		
-		this->test_min_vertex(mesh);
-		this->test_max_vertex(mesh);
-
-		this->meshes.push_back(mesh);
-
-		std::cout << "Mesh loaded" << std::endl;
-	}
+	this->load_node(folder, *ai_scene, *ai_scene->mRootNode, aiMatrix4x4());
 }
 
 void Scene::render()

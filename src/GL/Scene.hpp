@@ -31,6 +31,8 @@ public:
 	glm::vec3 get_max_vertex() { return this->max_vertex; }
 	glm::vec3 get_size() { return this->max_vertex - this->min_vertex;  }
 
+	void load_node(const std::string folder, const aiScene& ai_scene, aiNode& ai_node, aiMatrix4x4 ai_transform);
+
 	void load(const std::string path);
 
 	void render();
