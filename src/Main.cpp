@@ -82,7 +82,9 @@ int main(int argc, char** argv)
 		return 5;
 	}
 
-	GLFWwindow* window = glfwCreateWindow(512, 512, "Hello world", NULL, NULL);
+	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE); // Must be placed before window creation.
+
+	GLFWwindow* window = glfwCreateWindow(712, 712, "MDMC", NULL, NULL);
 
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4); // OpenGL 4.2 required to run Image load/store extension.
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
