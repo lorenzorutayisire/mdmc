@@ -13,6 +13,9 @@ layout(binding = 1, r32ui) uniform uimage3D u_minecraft_blocks;
 layout(binding = 2) uniform sampler2DArray u_minecraft_avg;
 layout(binding = 3) uniform sampler2DArray u_minecraft_textures;
 
+in float flogz;
+in float Fcoef;
+
 vec4 get_voxel_color()
 {
 	vec3 before = (v_tex_coord - v_normal / 2) / u_voxel_size;
@@ -35,20 +38,18 @@ vec4 get_voxel_color()
 //
 uint get_minecraft_block_id()
 {
-	ivec3 prev_block_coord = ivec3(v_tex_coord - v_normal / 2);
-	ivec3 next_block_coord = ivec3(v_tex_coord + v_normal / 2);
-
+	ivec3 prev_block_coord = ivec3(floor(v_tex_coord - v_normal / 2));
+	ivec3 next_block_coord = ivec3(floor(v_tex_coord + v_normal / 2));
+	
 	uint prev_block_id = imageLoad(u_minecraft_blocks, prev_block_coord).r;
 	uint next_block_id = imageLoad(u_minecraft_blocks, next_block_coord).r;
-
+	
 	if (prev_block_id == 0)
-	{
 		return next_block_id;
-	}
-	if (next_block_id == 0)
-	{
+	else if (next_block_id == 0)
 		return prev_block_id;
-	}
+	else
+		return 0; // neither of them is 0
 }
 
 //
@@ -57,16 +58,23 @@ uint get_minecraft_block_id()
 vec4 get_minecraft_avg_color()
 {
 	uint block_id = get_minecraft_block_id();
+
+	if (block_id == 0)
+		discard;
+
 	return texture(u_minecraft_avg, vec3(0, 0, block_id));
 }
 
 //
 // Using the block id retrieved, maps the texture of this fragment.
-// TODO
 //
 vec4 get_minecraft_texture_color()
 {
 	uint block_id = get_minecraft_block_id();
+
+	if (block_id == 0)
+		discard;
+
 	vec2 tex_coord;
 
 	if (v_normal.x > 0)
@@ -98,5 +106,9 @@ void main()
 	{
 		discard;
 	}
+	
+	const float Fcoef_half = Fcoef / 2;
+    gl_FragDepth = log2(flogz) * Fcoef_half;
+	
 	gl_FragColor = color;
 }
