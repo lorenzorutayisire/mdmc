@@ -13,9 +13,6 @@ layout(binding = 1, r32ui) uniform uimage3D u_minecraft_blocks;
 layout(binding = 2) uniform sampler2DArray u_minecraft_avg;
 layout(binding = 3) uniform sampler2DArray u_minecraft_textures;
 
-in float flogz;
-in float Fcoef;
-
 vec4 get_voxel_color()
 {
 	vec3 before = (v_tex_coord - v_normal / 2) / u_voxel_size;
@@ -106,9 +103,6 @@ void main()
 	{
 		discard;
 	}
-	
-	const float Fcoef_half = Fcoef / 2;
-    gl_FragDepth = log2(flogz) * Fcoef_half;
 	
 	gl_FragColor = color;
 }
