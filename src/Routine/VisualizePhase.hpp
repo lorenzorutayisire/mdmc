@@ -74,7 +74,7 @@ public:
 
 		this->create_program();
 
-		glfwSetInputMode(phase_manager->get_window(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		//glfwSetInputMode(phase_manager->get_window(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	}
 
 	void set_camera_mode(char camera_mode)
