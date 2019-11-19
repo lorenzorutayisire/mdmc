@@ -2,9 +2,13 @@
 
 project ("mdmc")
 
+set (CMAKE_CXX_STANDARD 17)
+
 # Loads the conan file and includes/links needed libraries.
 include("conanbuildinfo.cmake")
 conan_basic_setup()
+
+include_directories("lib")
 
 # Puts all resources inside /bin/resources folder.
 file(GLOB RESOURCES "resources/*")
@@ -20,12 +24,20 @@ add_executable (
 	"src/Voxelizer.hpp"
 	"src/Voxelizer.cpp"
 	
+	# ImGui
+	"lib/imgui/imgui_impl_glfw.h"
+	"lib/imgui/imgui_impl_glfw.cpp"
+	"lib/imgui/imgui_impl_opengl3.h"
+	"lib/imgui/imgui_impl_opengl3.cpp"
+
 	# Routine
 	"src/Routine/LoadingPhase.hpp"
 	"src/Routine/VisualizePhase.hpp"
 	"src/Routine/VoxelizePhase.hpp"
 	
 	# Minecraft
+	"src/Minecraft/Minecraft.hpp"
+	"src/Minecraft/Minecraft.cpp"
 	"src/Minecraft/TextureAsset.hpp"
 	"src/Minecraft/TextureAsset.cpp"
 
