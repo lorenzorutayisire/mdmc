@@ -9,18 +9,25 @@
 #include <iostream>
 #include <chrono>
 
+#include <rapidjson/istreamwrapper.h>
+
 using namespace Minecraft;
 
-std::unordered_map<std::string, nlohmann::json> json_cache;
+std::unordered_map<std::string, std::shared_ptr<rapidjson::Document>> json_cache;
 
-nlohmann::json& read_json(const std::filesystem::path& path)
+std::shared_ptr<rapidjson::Document> read_json(const std::filesystem::path& path)
 {
 	std::string path_str = path.u8string();
 	if (json_cache.find(path_str) == json_cache.end())
 	{
-		nlohmann::json json;
-		std::ifstream(path) >> json; // Bottleneck!
-		json_cache.insert(std::make_pair(path_str, json));
+		auto document = std::make_shared<rapidjson::Document>();
+
+		std::ifstream stream(path);
+		rapidjson::IStreamWrapper stream_wrapper(stream);
+
+		document->ParseStream(stream_wrapper);
+
+		json_cache.insert(std::make_pair(path_str, document));
 	}
 	return json_cache[path_str];
 }
@@ -38,7 +45,7 @@ void load_textures(const std::filesystem::path& path, Assets* assets)
 		uint8_t* data = stbi_load(file_path.c_str(), &width, &height, NULL, STBI_rgb_alpha);
 
 		const std::string id = "block/" + entry.path().stem().u8string();
-		assets->textures.insert(std::make_pair(id, Texture{ data }));
+		assets->textures.insert(std::make_pair(id, new Texture{ data }));
 	}
 
 	auto t1 = std::chrono::high_resolution_clock::now();
@@ -49,11 +56,11 @@ void load_textures(const std::filesystem::path& path, Assets* assets)
 
 /* Model_Face */
 
-bool load_model_face(Model_Element& element, std::string position, nlohmann::json& json, std::unordered_map<std::string, std::string>& variables, Assets* assets)
+bool load_model_face(Model_Element& element, std::string position, rapidjson::Value::Object& json, std::unordered_map<std::string, std::string>& variables, Assets* assets)
 {
 	std::string texture_id;
 
-	texture_id = json["texture"].get<std::string>();
+	texture_id = json["texture"].GetString();
 	while (texture_id[0] == '#')
 	{
 		std::string variable_name = texture_id.substr(1);
@@ -74,7 +81,7 @@ bool load_model_face(Model_Element& element, std::string position, nlohmann::jso
 	element.faces.push_back(
 		Model_Face{
 			position,
-			&assets->textures[texture_id]
+			assets->textures[texture_id]
 		}
 	);
 
@@ -83,16 +90,27 @@ bool load_model_face(Model_Element& element, std::string position, nlohmann::jso
 
 /* Model_Element */
 
-bool load_model_element(Model& model, nlohmann::json& json, std::unordered_map<std::string, std::string>& variables, Assets* assets)
+bool load_model_element(Model& model, rapidjson::Value::Object& json, std::unordered_map<std::string, std::string>& variables, Assets* assets)
 {
-	Model_Element element{
-		json["from"].get<std::array<int32_t, 3>>(),
-		json["to"].get<std::array<int32_t, 3>>()
+	Model_Element element;
+
+	auto json_from = json["from"].GetArray();
+	element.from = {
+		json_from[0].GetFloat(),
+		json_from[1].GetFloat(),
+		json_from[2].GetFloat()
 	};
 
-	for (auto& [key, value] : json["faces"].items())
+	auto json_to = json["to"].GetArray();
+	element.to = {
+		json_to[0].GetFloat(),
+		json_to[1].GetFloat(),
+		json_to[2].GetFloat()
+	};
+
+	for (auto& member : json["faces"].GetObject())
 	{
-		if (!load_model_face(element, key, value, variables, assets))
+		if (!load_model_face(element, member.name.GetString(), member.value.GetObject(), variables, assets))
 		{
 			return false;
 		}
@@ -106,28 +124,35 @@ bool load_model_element(Model& model, nlohmann::json& json, std::unordered_map<s
 
 bool load_model(std::filesystem::path& base_path, std::string id, Model& model, std::unordered_map<std::string, std::string>& variables, Assets* assets)
 {
-	nlohmann::json json = read_json(base_path / (id + ".json"));
+	// Reads the cached JSON associated with the given path.
+	// We don't need the rapidjson::Document instance but its rapidjson::Value::Object equivalent.
+	auto json = read_json(base_path / (id + ".json"))->GetObject();
 
-	if (!json["textures"].is_null())
+	if (json.HasMember("textures"))
 	{
-		std::unordered_map<std::string, std::string> local_variables = json["textures"].get<std::unordered_map<std::string, std::string>>();
-		local_variables.erase("particle"); // We don't care about particle effect.
-		variables.insert(local_variables.begin(), local_variables.end());
-	}
-
-	for (auto& [key, value] : json["elements"].items())
-	{
-		if (!load_model_element(model, value, variables, assets))
+		for (auto& member : json["textures"].GetObject())
 		{
-			// An element failed to load, probably because of an undefined texture variable.
-			return false;
+			if (member.name.GetString() != "particle"); // We don't care about particle effect.
+				variables.insert(std::make_pair(member.name.GetString(), member.value.GetString()));
 		}
 	}
 
-	if (!json["parent"].is_null())
+	if (json.HasMember("elements"))
+	{
+		for (auto& element : json["elements"].GetArray())
+		{
+			if (!load_model_element(model, element.GetObject(), variables, assets))
+			{
+				// An element failed to load, probably because of an undefined texture variable.
+				return false;
+			}
+		}
+	}
+
+	if (json.HasMember("parent"))
 	{
 		// If the parent failed because of an undefined texture variable, also the child has to fail.
-		return load_model(base_path, json["parent"], model, variables, assets);
+		return load_model(base_path, json["parent"].GetString(), model, variables, assets);
 	}
 
 	return true; // If no parent is present and the elements successfully loaded, returns true.
@@ -141,8 +166,9 @@ void load_models(std::filesystem::path base_path, Assets* assets)
 	{
 		const std::string id = "block/" + entry.path().stem().u8string();
 
-		Model model;
-		if (!load_model(base_path, id, model, std::unordered_map<std::string, std::string>(), assets))
+		auto model = std::make_shared<Model>();
+
+		if (!load_model(base_path, id, *model, std::unordered_map<std::string, std::string>(), assets))
 		{
 			continue; // Intermediate model, like cube.json, we can't load it.
 		}
@@ -156,42 +182,45 @@ void load_models(std::filesystem::path base_path, Assets* assets)
 
 /****************************************************************** block_states */
 
-BlockState_Variant load_block_state_variant(const std::string& id, nlohmann::json& json, Assets* assets)
+void BlockState_Variant::from_json(const std::string& id, rapidjson::Value::Object& json, Assets* assets)
 {
-	// If the current variant has more than one model, picks the first one (Minecraft picks it randomly).
-	if (json.is_array())
-	{
-		json = json[0];
-	}
-
 	BlockState_Variant variant = {
 		id,
-		&assets->models[json["model"].get<std::string>()]
+		assets->models[json["model"].GetString()]
 	};
 
-	if (!json["x"].is_null())
-		variant.x = json["x"].get<int32_t>();
+	if (json.HasMember("x"))
+		variant.x = json["x"].GetInt();
 
-	if (!json["y"].is_null())
-		variant.y = json["y"].get<int32_t>();
-
-	return variant;
+	if (json.HasMember("y"))
+		this->y = json["y"].GetInt();
 }
 
-BlockState load_block_state(const std::filesystem::path& base_path, const std::string& id, Assets* assets)
+inline void BlockState_Variant::from_json(const std::string& id, rapidjson::Value::Array& json, Assets* assets)
 {
-	nlohmann::json json = read_json(base_path / (id + ".json"));
+	return this->from_json(id, json[0].GetObject(), assets);
+}
 
-	BlockState block_state{ id };
+void BlockState::from_file(const std::filesystem::path& base_path, const std::string& id, Assets* assets)
+{
+ 	this->id = id;
 
-	for (auto& [key, value] : json["variants"].items())
+	auto json = read_json(base_path / (id + ".json"))->GetObject();
+
+	if (json.HasMember("variants"))
 	{
-		block_state.variants.push_back(
-			load_block_state_variant(key, value, assets)
-		);
-	}
+		for (auto& member : json["variants"].GetObject())
+		{
+			BlockState_Variant variant;
 
-	return block_state;
+			if (member.value.IsArray()) // More than one model for the same variant, we'll pick the first one.
+				variant.from_json(member.name.GetString(), member.value.GetArray(), assets);
+			else
+				variant.from_json(member.name.GetString(), member.value.GetObject(), assets);
+
+			this->variants.push_back(std::move(variant));
+		}
+	}
 }
 
 void load_block_states(const std::filesystem::path path, Assets* assets)
@@ -201,7 +230,9 @@ void load_block_states(const std::filesystem::path path, Assets* assets)
 	for (const auto& entry : std::filesystem::directory_iterator(path))
 	{
 		const std::string id = entry.path().stem().u8string();
-		BlockState block_state = load_block_state(path, id, assets);
+
+		auto block_state = std::make_shared<BlockState>();
+		block_state->from_file(path, id, assets);
 
 		assets->block_states.insert(std::make_pair(id, block_state));
 	}
