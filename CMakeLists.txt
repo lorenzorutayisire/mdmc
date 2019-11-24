@@ -8,6 +8,7 @@ set (CMAKE_CXX_STANDARD 17)
 include("conanbuildinfo.cmake")
 conan_basic_setup()
 
+include_directories("src")
 include_directories("lib")
 
 # Puts all resources inside /bin/resources folder.
@@ -36,8 +37,10 @@ add_executable (
 	"src/Routine/VoxelizePhase.hpp"
 	
 	# Minecraft
-	"src/Minecraft/Minecraft.hpp"
-	"src/Minecraft/Minecraft.cpp"
+	"src/Minecraft/Assets.hpp"
+	"src/Minecraft/Assets.cpp"
+	"src/Minecraft/AssetsPhase.hpp"
+	"src/Minecraft/AssetsPhase.cpp"
 	"src/Minecraft/TextureAsset.hpp"
 	"src/Minecraft/TextureAsset.cpp"
 

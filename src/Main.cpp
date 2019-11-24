@@ -11,11 +11,14 @@
 #include "imgui/imgui_impl_opengl3.h"
 
 #include "PhaseManager.hpp"
-#include "Routine/LoadingPhase.hpp"
+
 
 #include "Minecraft/TextureAsset.hpp"
 
-#include "Minecraft/Minecraft.hpp"
+#include "Minecraft/Assets.hpp"
+#include "Minecraft/AssetsPhase.hpp"
+
+using namespace mdmc;
 
 void GLAPIENTRY
 MessageCallback(GLenum source,
@@ -26,9 +29,7 @@ MessageCallback(GLenum source,
 	const GLchar* message,
 	const void* userParam)
 {
-	fprintf(stderr, "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
-		(type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""),
-		type, severity, message);
+	fprintf(stderr, "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n", (type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""), type, severity, message);
 }
 
 
@@ -67,7 +68,7 @@ int main(int argc, char** argv)
 		std::cerr << "A Minecraft schematic can't be negative or 0." << std::endl;
 		return 3;
 	}
-	
+
 	const uint16_t height = (uint16_t)raw_height;
 
 	// <minecraft_version>
@@ -117,7 +118,7 @@ int main(int argc, char** argv)
 
 	glfwShowWindow(window); // Now the window can be shown.
 
-	
+
 	// ImGui context setup.
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -129,14 +130,16 @@ int main(int argc, char** argv)
 
 	// Minecraft loading.
 
-	Minecraft::load("tmp/mc_assets/1.14");
+	Minecraft::Assets assets;
+	assets.store("tmp/mc_assets/1.14.4");
 
 	// Scene loading.
 
 	PhaseManager phase_manager(window);
 
-	phase_manager.set_phase(nullptr);
-	
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	phase_manager.set_phase(new AssetsPhase(assets));
+
 	bool show_demo_window = true;
 
 	while (!glfwWindowShouldClose(window))
@@ -154,30 +157,10 @@ int main(int argc, char** argv)
 		phase_manager.on_update(1.0f);
 
 		// Rendering
-
-		int display_w, display_h;
-		glfwGetFramebufferSize(window, &display_w, &display_h);
-		glViewport(0, 0, display_w, display_h);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glClearColor(0, 0, 0.5, 0);
-
 		phase_manager.on_render();
-
-		// ImGui rendering.
-		ImGui_ImplOpenGL3_NewFrame();
-		ImGui_ImplGlfw_NewFrame();
-		ImGui::NewFrame();
-
-		// Only shows the demo window with its components.
-		ImGui::ShowDemoWindow(&show_demo_window);
-
-		// ImGui renders.
-		ImGui::Render();
-		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 		glfwSwapBuffers(window);
 	}
-
 
 	// ImGui cleanup
 	ImGui_ImplOpenGL3_Shutdown();
