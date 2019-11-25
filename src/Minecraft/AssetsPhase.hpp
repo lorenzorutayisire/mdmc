@@ -30,12 +30,16 @@ namespace mdmc
 		Viewer viewer;
 
 		size_t selected_block_id;
-		bool just_selected;
+		double last_selection_change;
 
 	public:
 		AssetsPhase(const Assets& assets);
 
+		void set_selected_block_id(size_t selected_block_id);
+
 		void on_update(PhaseManager* phase_manager, float delta);
+
 		void on_render(PhaseManager* phase_manager);
+		void on_render_ui(PhaseManager* phase_manager);
 	};
 }

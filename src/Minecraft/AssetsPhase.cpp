@@ -1,5 +1,7 @@
 #include "AssetsPhase.hpp"
 
+#include <imgui.h>
+
 using namespace mdmc;
 
 AssetsPhase::AssetsPhase(const Assets& assets) : assets(&assets), selected_block_id(0)
@@ -35,31 +37,29 @@ AssetsPhase::AssetsPhase(const Assets& assets) : assets(&assets), selected_block
 	}
 }
 
+void AssetsPhase::set_selected_block_id(size_t selected_block_id)
+{
+	auto t0 = glfwGetTime();
+
+	if (t0 - last_selection_change >= .25)
+	{
+		this->selected_block_id = selected_block_id > this->assets->blocks_by_id.size() ? (this->assets->blocks_by_id.size() - 1) : selected_block_id;
+
+		last_selection_change = t0;
+
+		std::cout << "Selected block ID: " << this->selected_block_id << std::endl;
+	}
+}
+
 void AssetsPhase::on_update(PhaseManager* phase_manager, float delta)
 {
 	this->viewer.on_update(phase_manager->get_window(), delta);
 
 	if (glfwGetKey(phase_manager->get_window(), GLFW_KEY_LEFT) == GLFW_PRESS)
-	{
-		if (selected_block_id == 0)
-			selected_block_id = this->assets->blocks_by_id.size() - 1;
-		else
-			selected_block_id--;
+		this->set_selected_block_id(selected_block_id - 1);
 
-		std::cout << "Selected block ID: " << selected_block_id << std::endl;
-	}
-
-	if (glfwGetKey(phase_manager->get_window(), GLFW_KEY_RIGHT) == GLFW_PRESS && !just_selected)
-	{
-		selected_block_id = (selected_block_id + 1) % this->assets->blocks_by_id.size();
-		std::cout << "Selected block ID: " << selected_block_id << std::endl;
-		just_selected = true;
-	}
-
-	if (glfwGetKey(phase_manager->get_window(), GLFW_KEY_LEFT) == GLFW_RELEASE || glfwGetKey(phase_manager->get_window(), GLFW_KEY_RIGHT) == GLFW_RELEASE)
-	{
-		just_selected = false;
-	}
+	if (glfwGetKey(phase_manager->get_window(), GLFW_KEY_RIGHT) == GLFW_PRESS)
+		this->set_selected_block_id(selected_block_id + 1);
 }
 
 void AssetsPhase::on_render(PhaseManager* phase_manager)
@@ -103,6 +103,27 @@ void AssetsPhase::on_render(PhaseManager* phase_manager)
 
 	Block block = this->assets->blocks_by_id[this->selected_block_id];
 	glDrawArrays(GL_QUADS, block.start_vertex_offset, block.vertices_count);
+}
+
+
+void AssetsPhase::on_render_ui(PhaseManager* phase_manager)
+{
+	ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
+
+	ImGui::Begin("Block ID", NULL, (
+		ImGuiWindowFlags_NoMove |
+		ImGuiWindowFlags_NoDecoration |
+		ImGuiWindowFlags_AlwaysAutoResize |
+		ImGuiWindowFlags_NoSavedSettings |
+		ImGuiWindowFlags_NoFocusOnAppearing |
+		ImGuiWindowFlags_NoNav
+	));
+
+	auto& block = this->assets->blocks_by_id[this->selected_block_id];
+
+	ImGui::Text(block.id.c_str());
+
+	ImGui::End();
 }
 
 

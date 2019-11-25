@@ -47,4 +47,12 @@ public:
 			this->phase->on_render(this);
 		}
 	}
+
+	void on_render_ui()
+	{
+		if (this->phase)
+		{
+			this->phase->on_render_ui(this);
+		}
+	}
 };

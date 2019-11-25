@@ -156,8 +156,18 @@ int main(int argc, char** argv)
 
 		phase_manager.on_update(1.0f);
 
-		// Rendering
+		/* Rendering */
 		phase_manager.on_render();
+
+		/* UI Rendering (ImGui) */
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
+
+		phase_manager.on_render_ui();
+
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 		glfwSwapBuffers(window);
 	}
