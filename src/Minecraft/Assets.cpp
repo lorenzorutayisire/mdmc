@@ -127,6 +127,8 @@ bool Assets::store_model_face(
 	{
 		for (auto j = 0; j < 2; j++)
 		{
+			auto k = abs(i - j);
+
 			glm::vec4 position;
 			glm::vec2 uv;
 
@@ -135,8 +137,8 @@ bool Assets::store_model_face(
 			{
 				position = glm::vec4(
 					face_orientation % 2 == 1 ? to[0].GetFloat() : from[0].GetFloat(),
-					i ? to[1].GetFloat() : from[1].GetFloat(),
-					j ? to[2].GetFloat() : from[2].GetFloat(),
+					k ? to[1].GetFloat() : from[1].GetFloat(),
+					i ? to[2].GetFloat() : from[2].GetFloat(),
 					1
 				);
 
@@ -149,23 +151,23 @@ bool Assets::store_model_face(
 			else if (face_orientation / 2 == 1)
 			{
 				position = glm::vec4(
-					i ? to[0].GetFloat() : from[0].GetFloat(),
+					k ? to[0].GetFloat() : from[0].GetFloat(),
 					face_orientation % 2 == 1 ? to[1].GetFloat() : from[1].GetFloat(),
-					j ? to[2].GetFloat() : from[2].GetFloat(),
+					i ? to[2].GetFloat() : from[2].GetFloat(),
 					1
 				);
 
 				if (!face.HasMember("uv"))
 				{
-					uv.x = position.x / 16.f;
-					uv.y = position.z / 16.f;
+					uv.x = position.x;
+					uv.y = position.z;
 				}
 			}
 			else if (face_orientation / 2 == 2)
 			{
 				position = glm::vec4(
-					i ? to[0].GetFloat() : from[0].GetFloat(),
-					j ? to[1].GetFloat() : from[1].GetFloat(),
+					k ? to[0].GetFloat() : from[0].GetFloat(),
+					i ? to[1].GetFloat() : from[1].GetFloat(),
 					face_orientation % 2 == 1 ? to[2].GetFloat() : from[2].GetFloat(),
 					1
 				);
@@ -187,13 +189,13 @@ bool Assets::store_model_face(
 			if (face.HasMember("uv"))
 			{
 				uv = glm::vec2(
-					face["uv"].GetArray()[i * 2].GetFloat() / 16.f,
-					face["uv"].GetArray()[j * 2 + 1].GetFloat() / 16.f
+					face["uv"].GetArray()[i * 2].GetFloat(),
+					face["uv"].GetArray()[k * 2 + 1].GetFloat()
 				);
 			}
 			
-			vertices.push_back(uv.x);
-			vertices.push_back(uv.y);
+			vertices.push_back(uv.x / 16.f);
+			vertices.push_back(uv.y / 16.f);
 
 			/* Texture */
 			vertices.push_back((GLfloat)texture_id);
@@ -325,13 +327,13 @@ void Assets::store_blocks(const std::filesystem::path& base_path)
 
 			auto model_name = variant["model"].GetString();
 
-			std::vector<GLfloat> model;
+			std::vector<GLfloat> model_vertices;
 			auto model_loaded = this->store_model(
 				base_path / "models",
 				model_name,
 				std::unordered_map<std::string, std::string>(),
 				transformation,
-				model
+				model_vertices
 			);
 
 			// Translates the model of a block every time, to get a row.
@@ -343,8 +345,9 @@ void Assets::store_blocks(const std::filesystem::path& base_path)
 				continue;
 			}
 
-			blocks_by_id.push_back(Block{ block_name, vertices.size(), model.size() });
-			std::copy(model.begin(), model.end(), std::back_inserter(vertices)); // If the model loaded successfully, copies the model inside of the VBO.
+			// "/ 10" because every vertex has 10 attributes and we have to take the vertices count, not attributes one. 
+			blocks_by_id.push_back(Block{ block_name, vertices.size() / 10, model_vertices.size() / 10 });
+			std::copy(model_vertices.begin(), model_vertices.end(), std::back_inserter(vertices)); // If the model loaded successfully, copies the model inside of the VBO.
 		}
 	}
 
