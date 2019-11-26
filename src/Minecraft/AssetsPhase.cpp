@@ -4,6 +4,28 @@
 
 using namespace mdmc;
 
+GLfloat outline_cube_vertices[] = {
+	/* Position | UV | Texture |    Tint  */
+	0,  0,  0,	 0, 0,    0,     0, 0, 0, 0,
+	0,  0,  16,  0, 0,    0,     0, 0, 0, 0,
+	0,  16, 16,  0, 0,    0,     0, 0, 0, 0,
+	16, 16, 16,  0, 0,    0,     0, 0, 0, 0,
+	16, 16, 0,   0, 0,    0,     0, 0, 0, 0,
+	0,  16, 0,   0, 0,    0,     0, 0, 0, 0,
+	0,  0,  0,   0, 0,    0,     0, 0, 0, 0,
+	16, 0,  0,   0, 0,    0,     0, 0, 0, 0,
+	16, 0,  16,  0, 0,    0,     0, 0, 0, 0,
+	0,  0,  16,  0, 0,    0,     0, 0, 0, 0,
+	0,  16, 16,  0, 0,    0,     0, 0, 0, 0,
+	0,  16, 0,   0, 0,    0,     0, 0, 0, 0,
+	16, 16, 0,   0, 0,    0,     0, 0, 0, 0,
+	16, 0,  0,   0, 0,    0,     0, 0, 0, 0,
+	16, 0,  16,  0, 0,    0,     0, 0, 0, 0,
+	16, 16, 16,  0, 0,    0,     0, 0, 0, 0
+};
+
+GLuint outline_cube_vbo;
+
 AssetsPhase::AssetsPhase(const Assets& assets) : assets(&assets), selected_block_id(0)
 {
 	std::cout << "================================================================" << std::endl;
@@ -35,6 +57,13 @@ AssetsPhase::AssetsPhase(const Assets& assets) : assets(&assets), selected_block
 		std::cerr << this->program.get_log() << std::endl;
 		throw;
 	}
+
+	glGenBuffers(1, &outline_cube_vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, outline_cube_vbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(outline_cube_vertices), outline_cube_vertices, GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
 }
 
 void AssetsPhase::set_selected_block_id(size_t selected_block_id)
@@ -103,6 +132,32 @@ void AssetsPhase::on_render(PhaseManager* phase_manager)
 
 	Block block = this->assets->blocks_by_id[this->selected_block_id];
 	glDrawArrays(GL_QUADS, block.start_vertex_offset, block.vertices_count);
+
+	/* Outline cube VBO */
+
+	glBindBuffer(GL_ARRAY_BUFFER, outline_cube_vbo);
+	
+	// \_ Position
+	location = this->program.get_attrib_location("position");
+	glEnableVertexAttribArray(location);
+	glVertexAttribPointer(location, 3, GL_FLOAT, false, (3 + 2 + 1 + 4) * sizeof(GLfloat), (void*)(0 * sizeof(GLfloat)));
+
+	// \_ UV
+	location = this->program.get_attrib_location("uv");
+	glEnableVertexAttribArray(location);
+	glVertexAttribPointer(location, 2, GL_FLOAT, false, (3 + 2 + 1 + 4) * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
+
+	// \_ Texture Id
+	location = this->program.get_attrib_location("texture_id");
+	glEnableVertexAttribArray(location);
+	glVertexAttribPointer(location, 1, GL_FLOAT, false, (3 + 2 + 1 + 4) * sizeof(GLfloat), (void*)((3 + 2) * sizeof(GLfloat)));
+
+	// \_ Tint
+	location = this->program.get_attrib_location("tint");
+	glEnableVertexAttribArray(location);
+	glVertexAttribPointer(location, 4, GL_FLOAT, false, (3 + 2 + 1 + 4) * sizeof(GLfloat), (void*)((3 + 2 + 1) * sizeof(GLfloat)));
+
+	glDrawArrays(GL_LINE_STRIP, 0, sizeof(outline_cube_vertices) / 10);
 }
 
 

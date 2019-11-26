@@ -144,8 +144,8 @@ bool Assets::store_model_face(
 
 				if (!face.HasMember("uv"))
 				{
-					uv.x = position.y;
-					uv.y = position.z;
+					uv.x = position.z;
+					uv.y = position.y;
 				}
 			}
 			else if (face_orientation / 2 == 1)
@@ -189,8 +189,8 @@ bool Assets::store_model_face(
 			if (face.HasMember("uv"))
 			{
 				uv = glm::vec2(
-					face["uv"].GetArray()[i * 2].GetFloat(),
-					face["uv"].GetArray()[k * 2 + 1].GetFloat()
+					16 - face["uv"].GetArray()[i * 2].GetFloat(),
+					16 - face["uv"].GetArray()[k * 2 + 1].GetFloat()
 				);
 			}
 			
@@ -240,6 +240,45 @@ bool Assets::store_model_element(
 	std::vector<GLfloat>& vertices
 )
 {
+	if (element.HasMember("rotation"))
+	{
+		auto& rotation = element["rotation"].GetObject();
+
+		glm::vec3 pivot(
+			rotation["origin"].GetArray()[0].GetFloat(),
+			rotation["origin"].GetArray()[1].GetFloat(),
+			rotation["origin"].GetArray()[2].GetFloat()
+		);
+
+		transformation = glm::translate(
+			transformation,
+			-pivot
+		);
+
+		glm::vec3 axis;
+		if (rotation["axis"].GetString() == "x")
+			axis = glm::vec3(1, 0, 0);
+		else if (rotation["axis"].GetString() == "y")
+			axis = glm::vec3(0, 1, 0);
+		else if (rotation["axis"].GetString() == "z")
+			axis = glm::vec3(0, 0, 1);
+		else
+			return false;
+
+		transformation = glm::rotate(
+			transformation,
+			glm::radians(rotation["angle"].GetFloat()),
+			axis
+		);
+
+		transformation = glm::translate(
+			transformation,
+			pivot
+		);
+
+		// rescale?
+	}
+
 	for (auto& member : element["faces"].GetObject())
 	{
 		if (!this->store_model_face(
@@ -305,7 +344,6 @@ bool Assets::store_model(
 void Assets::store_blocks(const std::filesystem::path& base_path)
 {
 	std::vector<GLfloat> vertices;
-	glm::mat4 transformation(1.0f);
 
 	for (auto& entry : std::filesystem::directory_iterator(base_path / "blockstates"))
 	{
@@ -326,6 +364,38 @@ void Assets::store_blocks(const std::filesystem::path& base_path)
 			auto block_name = blockstate_name + "[" + variant_member.name.GetString() + "]";
 
 			auto model_name = variant["model"].GetString();
+
+			glm::mat4 transformation(1.0f);
+
+			// Translates the block to its own center in order to rotate around it.
+			transformation = glm::translate(
+				transformation,
+				glm::vec3(8, 8, 8)
+			);
+
+			if (variant.HasMember("x"))
+			{
+				transformation = glm::rotate(
+					transformation,
+					glm::radians(variant["x"].GetFloat()),
+					glm::vec3(1, 0, 0)
+				);
+			}
+
+			if (variant.HasMember("y"))
+			{
+				transformation = glm::rotate(
+					transformation,
+					glm::radians(variant["y"].GetFloat()),
+					glm::vec3(0, 1, 0)
+				);
+			}
+
+			// Translates back the model to (0, 0, 0).
+			transformation = glm::translate(
+				transformation,
+				glm::vec3(-8, -8, -8)
+			);
 
 			std::vector<GLfloat> model_vertices;
 			auto model_loaded = this->store_model(
