@@ -299,10 +299,10 @@ int Assets::load_model(
 		}
 	}
 
+	uint32_t vertices_count = 0;
+
 	if (can_store && model.HasMember("elements"))
 	{
-		uint32_t vertices_count = 0;
-
 		for (auto& element : model["elements"].GetArray())
 		{
 			vertices_count += this->load_model_element(
@@ -331,7 +331,7 @@ int Assets::load_model(
 		);
 	}
 
-	return true;
+	return vertices_count;
 }
 
 void Assets::retrieve()
@@ -429,7 +429,6 @@ void Assets::load_block_states(const Atlas& atlas, bool forced)
 
 			glm::mat4 transformation(1.0f);
 			transformation = glm::translate(transformation, glm::vec3(0.0f, 0.0f, 16 * blocks_count));
-			blocks_count++;
 
 			// Translates the block to its own center in order to rotate around it.
 			transformation = glm::translate(
@@ -478,6 +477,8 @@ void Assets::load_block_states(const Atlas& atlas, bool forced)
 				//std::cerr << "Block failed (probably due to an undefined texture): " << model_name << std::endl;
 				continue;
 			}
+
+			blocks_count++;
 
 			std::string variant_attr = variant_member.name.GetString();
 

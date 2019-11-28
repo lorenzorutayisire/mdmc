@@ -1,7 +1,7 @@
 #include "Viewer.hpp"
 
 Viewer::Viewer() :
-	movement_speed(0.1),
+	movement_speed(1),
 	rotation_speed(1.0),
 
 	last_cursor_x(0),
