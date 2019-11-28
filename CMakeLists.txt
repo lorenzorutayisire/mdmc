@@ -24,6 +24,7 @@ add_executable (
 	"src/PhaseManager.hpp"
 	"src/Voxelizer.hpp"
 	"src/Voxelizer.cpp"
+	"src/Renderable.hpp"
 	
 	# ImGui
 	"lib/imgui/imgui_impl_glfw.h"

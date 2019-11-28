@@ -13,6 +13,18 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
+#define TEXTURES_PATH(path)		  (path / "textures")
+#define TEXTURES_BLOCK_PATH(path) (TEXTURES_PATH(path) / "block")
+
+#define MODELS_PATH(path)		  (path / "models")
+#define MODELS_BLOCK_PATH(path)   (MODELS_PATH(path) / "block")
+
+#define BLOCK_STATES_PATH(path)   (path / "blockstates")
+
+#define BIN_PATH(path)		            (path / "bin")
+#define BIN_ATLAS_PATH(path)            (BIN_PATH(path) / "atlas.png")
+#define BIN_ATLAS_DESCRIPTOR_PATH(path) (BIN_PATH(path) / "atlas.json")
+
 using namespace mdmc::Minecraft;
 
 std::unordered_map<std::string, std::shared_ptr<rapidjson::Document>> json_cache;
@@ -38,61 +50,45 @@ std::shared_ptr<rapidjson::Document> read_json(const std::filesystem::path& path
 // Assets
 // =====================================================================================
 
-void Assets::store_textures(const std::filesystem::path& path)
+Assets::Assets(const std::filesystem::path& base_path, const std::string& version) :
+	base_path(base_path),
+	version(version)
 {
-	size_t textures_count = 0;
-
-	for (auto& entry : std::filesystem::directory_iterator(path / "block"))
-		textures_count++;
-
-	glGenTextures(1, &this->textures);
-
-	glBindTexture(GL_TEXTURE_2D_ARRAY, this->textures);
-	glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RGBA8, 16, 16, textures_count);
-
-	for (auto& entry : std::filesystem::directory_iterator(path / "block"))
-	{
-		auto texture_path = entry.path();
-
-		if (texture_path.extension() == ".mcmeta")
-			continue;
-
-		auto texture_name = "block/" + texture_path.stem().u8string();
-
-		int width, height;
-		uint8_t* image_data = stbi_load(texture_path.u8string().c_str(), &width, &height, NULL, STBI_rgb_alpha);
-
-		if (image_data == nullptr)
-		{
-			std::cerr << stbi_failure_reason << ": " << texture_name << std::endl;
-			continue;
-		}
-
-		if (width > 16 || height > 16)
-		{
-			std::cerr << "Texture isn't 16x16: " << texture_name << " (" << width << "x" << height << ")" << std::endl;
-			continue;
-		}
-
-		textures_count--;
-
-		glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, textures_count, 16, 16, 1, GL_RGBA, GL_UNSIGNED_BYTE, image_data);
-
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-		this->textures_by_name.insert(std::make_pair(texture_name, textures_count));
-
-		stbi_image_free(image_data);
-	}
-
-	glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 }
 
-bool Assets::store_model_face(
-	const std::unordered_map<std::string, std::string>& variables,
+const std::filesystem::path Assets::path() const
+{
+	return this->base_path / version / "assets" / "minecraft";
+}
+
+const Block& Assets::get_block(size_t id) const
+{
+	return this->blocks_by_name[id];
+}
+
+const std::vector<Block>& Assets::get_blocks() const
+{
+	return this->blocks_by_name;
+}
+
+GLuint Assets::get_atlas() const
+{
+	return this->atlas;
+}
+
+GLuint Assets::get_vbo() const
+{
+	return this->vbo;
+}
+
+size_t Assets::get_vertices_count() const
+{
+	return this->vertices_count;
+}
+
+int Assets::load_model_face(
+	const std::unordered_map<std::string, std::string>& textures_variables,
+	const Atlas& atlas,
 
 	ModelFaceOrientation face_orientation,
 	const ModelFace& face,
@@ -107,18 +103,18 @@ bool Assets::store_model_face(
 	texture_name = face["texture"].GetString();
 	while (texture_name[0] == '#')
 	{
-		auto variable_name = texture_name.substr(1);
+		auto texture_var_name = texture_name.substr(1);
 
-		if (variables.find(variable_name) == variables.end())
-			return false; // Unable to solve the variable name.
+		if (textures_variables.find(texture_var_name) == textures_variables.end())
+			return -1; // Unable to solve the texture_variable name.
 
-		texture_name = variables.at(variable_name);
+		texture_name = textures_variables.at(texture_var_name);
 	}
 
-	if (this->textures_by_name.find(texture_name) == this->textures_by_name.end())
-		return false;
+	if (atlas.textures_by_name.find(texture_name) == atlas.textures_by_name.end())
+		return -1;
 
-	uint32_t texture_id = this->textures_by_name[texture_name];
+	auto& texture = atlas.textures_by_name.at(texture_name);
 
 	auto from = element["from"].GetArray();
 	auto to = element["to"].GetArray();
@@ -142,11 +138,8 @@ bool Assets::store_model_face(
 					1
 				);
 
-				if (!face.HasMember("uv"))
-				{
-					uv.x = position.z;
-					uv.y = position.y;
-				}
+				uv.x = position.z;
+				uv.y = position.y;
 			}
 			else if (face_orientation / 2 == 1)
 			{
@@ -157,11 +150,8 @@ bool Assets::store_model_face(
 					1
 				);
 
-				if (!face.HasMember("uv"))
-				{
-					uv.x = position.x;
-					uv.y = position.z;
-				}
+				uv.x = position.x;
+				uv.y = position.z;
 			}
 			else if (face_orientation / 2 == 2)
 			{
@@ -172,11 +162,8 @@ bool Assets::store_model_face(
 					1
 				);
 
-				if (!face.HasMember("uv"))
-				{
-					uv.x = position.x;
-					uv.y = position.y;
-				}
+				uv.x = position.x;
+				uv.y = position.y;
 			}
 
 			position = transformation * position;
@@ -193,33 +180,21 @@ bool Assets::store_model_face(
 					16 - face["uv"].GetArray()[k * 2 + 1].GetFloat()
 				);
 			}
-			
-			vertices.push_back(uv.x / 16.f);
-			vertices.push_back(uv.y / 16.f);
 
-			/* Texture */
-			vertices.push_back((GLfloat)texture_id);
+			// Atlas-absolute UV
+			uv.x += texture.x;
+			uv.y += texture.y;
 
-			/* Tint-index */
-			if (!face.HasMember("tintindex"))
-			{
-				vertices.push_back(1.0f);
-				vertices.push_back(1.0f);
-				vertices.push_back(1.0f);
-				vertices.push_back(1.0f);
-			}
-			else
-			{
-				// If tint-index is set, by default sets a leaf-like color.
-				vertices.push_back(87.f / 255.f);
-				vertices.push_back(179.f / 255.f);
-				vertices.push_back(59.f / 255.f);
-				vertices.push_back(1.0f);
-			}
+			// Normalize UV (previously were Minecraft pixels 0->16)
+			uv.x /= (float)atlas.w;
+			uv.y /= (float)atlas.h;
+
+			vertices.push_back(uv.x);
+			vertices.push_back(uv.y);
 		}
 	}
 
-	return true;
+	return 4;
 }
 
 auto orientation_by_name = std::unordered_map<std::string, ModelFaceOrientation>{
@@ -231,8 +206,9 @@ auto orientation_by_name = std::unordered_map<std::string, ModelFaceOrientation>
 	{"north", NORTH},
 };
 
-bool Assets::store_model_element(
-	const std::unordered_map<std::string, std::string>& variables,
+int Assets::load_model_element(
+	const std::unordered_map<std::string, std::string>& textures_variables,
+	const Atlas& atlas,
 
 	const ModelElement& element,
 
@@ -279,25 +255,32 @@ bool Assets::store_model_element(
 		// rescale?
 	}
 
+	uint32_t vertices_count = 0;
+
 	for (auto& member : element["faces"].GetObject())
 	{
-		if (!this->store_model_face(
-			variables,
+		vertices_count += this->load_model_face(
+			textures_variables,
+			atlas,
 			orientation_by_name[member.name.GetString()],
 			member.value.GetObject(),
 			element,
 			transformation,
 			vertices
-		)) return false;
+		);
+
+		if (vertices_count < 0)
+			return -1;
 	}
 
-	return true;
+	return vertices_count;
 }
 
-bool Assets::store_model(
-	const std::filesystem::path& base_path,
+int Assets::load_model(
 	const std::string& id,
-	std::unordered_map<std::string, std::string>& variables,
+
+	std::unordered_map<std::string, std::string>& textures_variables,
+	const Atlas& atlas,
 
 	glm::mat4 transformation,
 	std::vector<GLfloat>& vertices,
@@ -305,33 +288,43 @@ bool Assets::store_model(
 	bool can_store
 )
 {
-	auto model = read_json(base_path / (id + ".json"))->GetObject();
+	auto model = read_json(MODELS_PATH(this->path()) / (id + ".json"))->GetObject();
 
 	if (model.HasMember("textures"))
 	{
 		for (auto& member : model["textures"].GetObject())
 		{
 			if (member.name.GetString() != "particle") // We don't care about particle effect.
-				variables.insert(std::make_pair(member.name.GetString(), member.value.GetString()));
+				textures_variables.insert(std::make_pair(member.name.GetString(), member.value.GetString()));
 		}
 	}
 
 	if (can_store && model.HasMember("elements"))
 	{
+		uint32_t vertices_count = 0;
+
 		for (auto& element : model["elements"].GetArray())
 		{
-			if (!this->store_model_element(variables, element.GetObject(), transformation, vertices))
-				return false;
+			vertices_count += this->load_model_element(
+				textures_variables,
+				atlas,
+				element.GetObject(),
+				transformation,
+				vertices
+			);
+
+			if (vertices_count < 0)
+				return -1;
 		}
 		can_store = false; // If the model itself stores elements, the parent can't.
 	}
 
 	if (model.HasMember("parent"))
 	{
-		return this->store_model(
-			base_path,
+		return this->load_model(
 			model["parent"].GetString(),
-			variables,
+			textures_variables,
+			atlas,
 			transformation,
 			vertices,
 			can_store
@@ -341,11 +334,83 @@ bool Assets::store_model(
 	return true;
 }
 
-void Assets::store_blocks(const std::filesystem::path& base_path)
+void Assets::retrieve()
+{
+	// Nope! Currently the Minecraft's assets should already lie at "tmp/mc_assets".
+}
+
+Atlas Assets::load_atlas_descriptor()
+{
+	Atlas atlas;
+
+	rapidjson::Document document;
+
+	std::ifstream stream(BIN_ATLAS_DESCRIPTOR_PATH(this->path()));
+	rapidjson::IStreamWrapper stream_wrapper(stream);
+
+	document.ParseStream(stream_wrapper);
+
+	/* meta */
+	auto size = document.GetObject()["meta"].GetObject()["size"].GetObject();
+	atlas.w = size["w"].GetInt();
+	atlas.h = size["h"].GetInt();
+
+	/* frames */
+	for (auto& entry : document.GetObject()["frames"].GetArray())
+	{
+		auto& frame = entry["frame"].GetObject();
+
+		std::string filename = entry["filename"].GetString();
+		auto texture_name = "block/" + filename.substr(0, filename.find('.'));
+
+		atlas.textures_by_name.insert(std::make_pair(
+			texture_name,
+			Texture{
+				(uint32_t)frame["x"].GetInt(),
+				(uint32_t)frame["y"].GetInt(),
+				(uint32_t)frame["w"].GetInt(),
+				(uint32_t)frame["h"].GetInt()
+			}
+		));
+	}
+
+	return atlas;
+}
+
+void Assets::load_atlas()
+{
+	glGenTextures(1, &this->atlas);
+	glBindTexture(GL_TEXTURE_2D, this->atlas);
+
+	int width, height;
+	stbi_uc* image_data = stbi_load(
+		BIN_ATLAS_PATH(this->path()).u8string().c_str(),
+		&width,
+		&height,
+		nullptr,
+		STBI_rgb_alpha
+	);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	stbi_image_free(image_data);
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void Assets::load_block_states(const Atlas& atlas, bool forced)
 {
 	std::vector<GLfloat> vertices;
+	this->vertices_count = 0;
 
-	for (auto& entry : std::filesystem::directory_iterator(base_path / "blockstates"))
+	uint32_t blocks_count = 0;
+
+	for (auto& entry : std::filesystem::directory_iterator(BLOCK_STATES_PATH(this->path())))
 	{
 		auto path = entry.path();
 
@@ -354,18 +419,17 @@ void Assets::store_blocks(const std::filesystem::path& base_path)
 
 		if (!blockstate.HasMember("variants"))
 		{
-			std::cerr << "Block without variants: " << blockstate_name << std::endl;
+			//std::cerr << "Block without variants: " << blockstate_name << std::endl;
 			continue;
 		}
 
 		for (auto& variant_member : blockstate["variants"].GetObject())
 		{
 			auto variant = variant_member.value.IsArray() ? variant_member.value.GetArray()[0].GetObject() : variant_member.value.GetObject();
-			auto block_name = blockstate_name + "[" + variant_member.name.GetString() + "]";
-
-			auto model_name = variant["model"].GetString();
 
 			glm::mat4 transformation(1.0f);
+			transformation = glm::translate(transformation, glm::vec3(0.0f, 0.0f, 16 * blocks_count));
+			blocks_count++;
 
 			// Translates the block to its own center in order to rotate around it.
 			transformation = glm::translate(
@@ -398,47 +462,67 @@ void Assets::store_blocks(const std::filesystem::path& base_path)
 			);
 
 			std::vector<GLfloat> model_vertices;
-			auto model_loaded = this->store_model(
-				base_path / "models",
+
+			auto model_name = variant["model"].GetString();
+
+			int model_vertices_count = this->load_model(
 				model_name,
 				std::unordered_map<std::string, std::string>(),
+				atlas,
 				transformation,
 				model_vertices
 			);
 
-			// Translates the model of a block every time, to get a row.
-			//transformation = glm::translate(transformation, glm::vec3(0.0f, 0.0f, 1.0f));
-
-			if (!model_loaded)
+			if (model_vertices_count < 0)
 			{
-				std::cerr << "Block failed (probably due to an undefined texture): " << model_name << std::endl;
+				//std::cerr << "Block failed (probably due to an undefined texture): " << model_name << std::endl;
 				continue;
 			}
 
-			// "/ 10" because every vertex has 10 attributes and we have to take the vertices count, not attributes one. 
-			blocks_by_id.push_back(Block{ block_name, vertices.size() / 10, model_vertices.size() / 10 });
-			std::copy(model_vertices.begin(), model_vertices.end(), std::back_inserter(vertices)); // If the model loaded successfully, copies the model inside of the VBO.
+			std::string variant_attr = variant_member.name.GetString();
+
+			auto block_name = blockstate_name + (variant_attr.empty() ? "" : "[" + variant_attr + "]");
+			this->blocks_by_name.push_back(Block{ block_name, vertices_count, (uint32_t)model_vertices_count });
+
+			std::copy(model_vertices.begin(), model_vertices.end(), std::back_inserter(vertices));
+			this->vertices_count += model_vertices_count;
 		}
 	}
 
 	glGenBuffers(1, &this->vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
 	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(vertices[0]), vertices.data(), GL_STATIC_DRAW);
-
-	this->vertices_count = vertices.size();
 }
 
-void Assets::store(const std::filesystem::path& base_path)
+void Assets::load()
 {
-	Assets* assets = new Assets();
+	this->load_atlas();
+	Atlas atlas = this->load_atlas_descriptor();
 
-	auto assets_path = base_path / "assets" / "minecraft";
-
-	this->store_textures(assets_path / "textures");
-	this->store_blocks(assets_path);
-
-	std::cout << "Loaded " << this->textures_by_name.size() << " textures." << std::endl;
-	std::cout << "Loaded " << this->blocks_by_id.size() << " blocks." << std::endl;
+	this->load_block_states(atlas);
 
 	json_cache.clear(); // We don't need this dirty cache anymore. TODO clean me.
+}
+
+void Assets::render()
+{
+	/* Texture */
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, this->atlas);
+
+	/* Color */
+	glUniform4f(3, 1, 1, 1, 1);
+
+	/* VBO */
+	glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
+
+	/* Position */
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), 0);
+
+	/* UV */
+	glEnableVertexAttribArray(2);
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
+
+	glDrawArrays(GL_QUADS, 0, this->vertices_count);
 }

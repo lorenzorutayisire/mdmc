@@ -13,6 +13,8 @@
 
 #include <rapidjson/document.h>
 
+#include "Renderable.hpp"
+
 namespace mdmc
 {
 	namespace Minecraft
@@ -21,7 +23,17 @@ namespace mdmc
 		// Texture
 		// =====================================================================================
 
-		using Texture = size_t;
+		struct Texture
+		{
+			uint32_t x, y;
+			uint32_t w, h;
+		};
+
+		struct Atlas
+		{
+			uint32_t w, h;
+			std::unordered_map<std::string, Texture> textures_by_name;
+		};
 
 		// =====================================================================================
 		// Block
@@ -48,30 +60,32 @@ namespace mdmc
 
 		struct Block
 		{
-			std::string id;
-
-			size_t start_vertex_offset;
-			size_t vertices_count;
+			std::string name;
+			uint32_t vertices_offset, vertices_count;
 		};
 
 		// =====================================================================================
 		// Assets
 		// =====================================================================================
 
-		struct Assets
+		class Assets : public Renderable
 		{
-			std::unordered_map<std::string, Texture> textures_by_name;
-			std::vector<Block> blocks_by_id;
+		private:
+			std::filesystem::path base_path;
+			std::string version;
 
-			GLuint textures;
+			GLuint atlas;
 
+			std::vector<Block> blocks_by_name;
 			GLuint vbo;
-			size_t vertices_count;
+			uint32_t vertices_count;
 
-			void store_textures(const std::filesystem::path& path);
+			Atlas load_atlas_descriptor();
+			void load_atlas();
 
-			bool store_model_face(
-				const std::unordered_map<std::string, std::string>& variables,
+			int load_model_face(
+				const std::unordered_map<std::string, std::string>& textures_variables,
+				const Atlas& atlas,
 
 				ModelFaceOrientation face_orientation,
 				const ModelFace& face,
@@ -81,8 +95,9 @@ namespace mdmc
 				std::vector<GLfloat>& vertices
 			);
 
-			bool store_model_element(
+			int load_model_element(
 				const std::unordered_map<std::string, std::string>& variables,
+				const Atlas& atlas,
 
 				const ModelElement& element,
 
@@ -90,10 +105,11 @@ namespace mdmc
 				std::vector<GLfloat>& vertices
 			);
 
-			bool store_model(
-				const std::filesystem::path& base_path,
-				const std::string& id,
-				std::unordered_map<std::string, std::string>& variables,
+			int load_model(
+				const std::string& model_id,
+
+				std::unordered_map<std::string, std::string>& textures_variables,
+				const Atlas& atlas,
 
 				glm::mat4 transformation,
 				std::vector<GLfloat>& vertices,
@@ -101,9 +117,30 @@ namespace mdmc
 				bool can_store = true
 			);
 
-			void store_blocks(const std::filesystem::path& base_path);
+			void load_block_states(
+				const Atlas& atlas,
+				bool forced = false
+			);
 
-			void store(const std::filesystem::path& base_path);
+		public:
+			Assets(
+				const std::filesystem::path& base_path,
+				const std::string& version
+			);
+
+			const std::filesystem::path path() const;
+
+			const Block& get_block(size_t id) const;
+			const std::vector<Block>& get_blocks() const;
+
+			GLuint get_atlas() const;
+			GLuint get_vbo() const;
+			size_t get_vertices_count() const;
+
+			void retrieve();
+			void load();
+
+			void render();
 		};
 	}
 }

@@ -1,18 +1,16 @@
-#version 450
+#version 430
 
-in vec3 position;
-in vec2 tex_coord;
-uint tex_id;
+layout (location = 0) in vec3 position;
+layout (location = 1) in vec3 normal;
+layout (location = 2) in vec2 tex_coord;
 
 uniform mat4 u_transform;
 uniform mat4 u_camera;
 
 out vec2 v_tex_coord;
-flat out uint v_tex_id;
 
 void main()
 {
 	gl_Position = u_camera * u_transform * vec4(position, 1.0);
 	v_tex_coord = tex_coord;
-	v_tex_id = tex_id;
 }

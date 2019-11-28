@@ -10,7 +10,7 @@
 #include "Phase.hpp"
 #include "PhaseManager.hpp"
 
-#include "GL/Scene.hpp"
+#include "Renderable.hpp"
 
 #include "GL/Shader.hpp"
 #include "GL/Program.hpp"
@@ -20,9 +20,12 @@
 #include "Voxelizer.hpp"
 #include "VoxelizePhase.hpp"
 
+using namespace mdmc;
+
 class VisualizePhase : public Phase
 {
 private:
+	std::shared_ptr<Renderable> renderable;
 	std::shared_ptr<Voxelizer> voxelizer;
 	Program program;
 	Viewer viewer;
@@ -59,9 +62,9 @@ private:
 	}
 
 public:
-	VisualizePhase(Scene* scene, uint16_t height, std::istream& minecraft_asset_file)
+	VisualizePhase(Renderable* renderable, uint16_t height, std::istream& minecraft_asset_file) : renderable(renderable)
 	{
-		this->voxelizer = std::make_shared<Voxelizer>(Voxelizer(*scene, height));
+		this->voxelizer = nullptr;//std::make_shared<Voxelizer>(Voxelizer(*renderable, height));
 		this->minecraft_asset_file = &minecraft_asset_file;
 		this->camera_mode = 'c';
 	}
@@ -106,10 +109,12 @@ public:
 
 	void on_render(PhaseManager* phase_manager)
 	{
+		glClearColor(0.5, 0.5, 0, 0);
+
 		this->program.use();
 
 		// Transform
-		glUniformMatrix4fv(this->program.get_uniform_location("u_transform"), 1, GL_FALSE, glm::value_ptr(this->voxelizer->get_transform()));
+		glUniformMatrix4fv(this->program.get_uniform_location("u_transform"), 1, GL_FALSE, glm::value_ptr(glm::mat4(1.0f))/*glm::value_ptr(this->voxelizer->get_transform())*/);
 
 		// Camera
 		switch (this->camera_mode)
@@ -128,6 +133,6 @@ public:
 			break;
 		}
 
-		this->voxelizer->get_scene()->render();
+		renderable->render();
 	}
 };

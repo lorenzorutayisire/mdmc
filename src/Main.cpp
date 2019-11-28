@@ -12,9 +12,9 @@
 
 #include "PhaseManager.hpp"
 
+#include "Routine/VisualizePhase.hpp"
 
 #include "Minecraft/TextureAsset.hpp"
-
 #include "Minecraft/Assets.hpp"
 #include "Minecraft/AssetsPhase.hpp"
 
@@ -112,10 +112,6 @@ int main(int argc, char** argv)
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_TEXTURE_3D);
 
-	glEnable(GL_ALPHA_TEST);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
 	glEnable(GL_DEBUG_OUTPUT); // Enables OpenGL warning & error logging.
 	glDebugMessageCallback(MessageCallback, 0);
 
@@ -133,20 +129,23 @@ int main(int argc, char** argv)
 
 	// Minecraft loading.
 
-	Minecraft::Assets assets;
-	assets.store("tmp/mc_assets/1.14.4");
+	Minecraft::Assets assets("tmp/mc_assets", "1.14.4");
+	assets.retrieve();
+	assets.load();
 
 	// Scene loading.
 
 	PhaseManager phase_manager(window);
 
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-	phase_manager.set_phase(new AssetsPhase(assets));
+	phase_manager.set_phase(new VisualizePhase(&assets, 2, minecraft_asset_file));
 
 	bool show_demo_window = true;
 
 	while (!glfwWindowShouldClose(window))
 	{
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 		// Update
 
 		glfwPollEvents();

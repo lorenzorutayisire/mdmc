@@ -1,14 +1,15 @@
-#version 450
+#version 430
 
 in vec2 v_tex_coord;
-flat in uint v_tex_id;
 
-uniform vec4 u_color;
-uniform sampler2DArray u_texture2d;
+layout(location = 3) uniform vec4 u_color;
+uniform sampler2D u_texture2d;
 
 out vec4 frag_color;
 
 void main()
 {
-	frag_color = u_color * texture(u_texture2d, vec3(v_tex_coord, v_tex_id));
+	frag_color = u_color * texture(u_texture2d, v_tex_coord);
+	if (frag_color.a == 0)
+		discard;
 }

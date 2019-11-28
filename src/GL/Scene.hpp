@@ -11,7 +11,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-class Scene
+#include "Renderable.hpp"
+
+class Scene : public mdmc::Renderable
 {
 private:
 	glm::vec3 min_vertex, max_vertex;

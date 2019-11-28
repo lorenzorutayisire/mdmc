@@ -72,7 +72,7 @@ void AssetsPhase::set_selected_block_id(size_t selected_block_id)
 
 	if (t0 - last_selection_change >= .25)
 	{
-		this->selected_block_id = selected_block_id > this->assets->blocks_by_id.size() ? (this->assets->blocks_by_id.size() - 1) : selected_block_id;
+		this->selected_block_id = selected_block_id > this->assets->get_blocks().size() ? (this->assets->get_blocks().size() - 1) : selected_block_id;
 
 		last_selection_change = t0;
 
@@ -105,10 +105,10 @@ void AssetsPhase::on_render(PhaseManager* phase_manager)
 	glUniformMatrix4fv(this->program.get_uniform_location("u_camera"), 1, GL_FALSE, glm::value_ptr(this->viewer.get_camera().matrix()));
 
 	/* Textures */
-	glBindTexture(GL_TEXTURE_2D_ARRAY, this->assets->textures);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, this->assets->get_atlas());
 
 	/* VBO */
-	glBindBuffer(GL_ARRAY_BUFFER, this->assets->vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, this->assets->get_vbo());
 
 	// \_ Position
 	auto location = this->program.get_attrib_location("position");
@@ -130,8 +130,8 @@ void AssetsPhase::on_render(PhaseManager* phase_manager)
 	glEnableVertexAttribArray(location);
 	glVertexAttribPointer(location, 4, GL_FLOAT, false, (3 + 2 + 1 + 4) * sizeof(GLfloat), (void*)((3 + 2 + 1) * sizeof(GLfloat)));
 
-	Block block = this->assets->blocks_by_id[this->selected_block_id];
-	glDrawArrays(GL_QUADS, block.start_vertex_offset, block.vertices_count);
+	Block block = this->assets->get_block(this->selected_block_id);
+	glDrawArrays(GL_QUADS, block.vertices_offset, block.vertices_count);
 
 	/* Outline cube VBO */
 
@@ -174,9 +174,9 @@ void AssetsPhase::on_render_ui(PhaseManager* phase_manager)
 		ImGuiWindowFlags_NoNav
 	));
 
-	auto& block = this->assets->blocks_by_id[this->selected_block_id];
+	auto& block = this->assets->get_block(this->selected_block_id);
 
-	ImGui::Text(block.id.c_str());
+	ImGui::Text(block.name.c_str());
 
 	ImGui::End();
 }
