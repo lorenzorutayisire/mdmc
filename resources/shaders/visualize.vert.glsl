@@ -1,10 +1,10 @@
 #version 430
 
-layout (location = 0) in vec3 position;
-layout (location = 1) in vec3 normal;
-layout (location = 2) in vec2 tex_coord;
+layout(location = 0) in vec3 position;
+layout(location = 1) in vec3 normal;
+layout(location = 2) in vec2 tex_coord;
 
-uniform mat4 u_transform;
+layout(location = 4) uniform mat4 u_transform;
 uniform mat4 u_camera;
 
 out vec2 v_tex_coord;
