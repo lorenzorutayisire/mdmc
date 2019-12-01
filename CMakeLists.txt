@@ -15,7 +15,11 @@ include_directories("lib")
 file(GLOB RESOURCES "resources/*")
 file(COPY ${RESOURCES} DESTINATION "${CMAKE_BINARY_DIR}/bin/resources")
 
-file(GLOB_RECURSE SRC "src/*.hpp" "src/*.cpp")
+file(GLOB_RECURSE
+	SRC
+	"src/*.hpp" "src/*.cpp"
+	"lib/*.hpp" "lib/*.cpp"	
+)
 
 list(JOIN SRC "\n" SRC_DEBUG)
 message(${SRC_DEBUG})
