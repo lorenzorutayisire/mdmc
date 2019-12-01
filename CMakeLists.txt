@@ -15,55 +15,11 @@ include_directories("lib")
 file(GLOB RESOURCES "resources/*")
 file(COPY ${RESOURCES} DESTINATION "${CMAKE_BINARY_DIR}/bin/resources")
 
-add_executable (
-	mdmc
-	
-	# Main
-	"src/Main.cpp"
-	"src/Phase.hpp"
-	"src/PhaseManager.hpp"
-	"src/Voxelizer.hpp"
-	"src/Voxelizer.cpp"
-	"src/Renderable.hpp"
-	
-	# ImGui
-	"lib/imgui/imgui_impl_glfw.h"
-	"lib/imgui/imgui_impl_glfw.cpp"
-	"lib/imgui/imgui_impl_opengl3.h"
-	"lib/imgui/imgui_impl_opengl3.cpp"
+file(GLOB_RECURSE SRC "src/*.hpp" "src/*.cpp")
 
-	# Routine
-	"src/Routine/LoadingPhase.hpp"
-	"src/Routine/VisualizePhase.hpp"
-	"src/Routine/VoxelizePhase.hpp"
-	
-	# Minecraft
-	"src/Minecraft/Assets.hpp"
-	"src/Minecraft/Assets.cpp"
-	"src/Minecraft/AssetsPhase.hpp"
-	"src/Minecraft/AssetsPhase.cpp"
-	"src/Minecraft/TextureAsset.hpp"
-	"src/Minecraft/TextureAsset.cpp"
+list(JOIN SRC "\n" SRC_DEBUG)
+message(${SRC_DEBUG})
 
-	# GL
-	"src/GL/Camera.hpp"
-	"src/GL/Camera.cpp"
-	"src/GL/Color.hpp"
-	"src/GL/Mesh.hpp"
-	"src/GL/Mesh.cpp"
-	"src/GL/Program.hpp"
-	"src/GL/Program.cpp"
-	"src/GL/Scene.hpp"
-	"src/GL/Scene.cpp"
-	"src/GL/Shader.hpp"
-	"src/GL/Shader.cpp"
-	"src/GL/Viewer.hpp"
-	"src/GL/Viewer.cpp"
+add_executable (mdmc ${SRC})
 
-	#"src/Phases/LoadScenePhase.hpp"
-	#"src/Phases/LoadScenePhase.cpp"
-	#"src/Phases/VisualizeScenePhase.hpp"
-	#"src/Phases/VisualizeScenePhase.cpp"
-	#"src/Phases/VoxelizeScenePhase.cpp"
-)
- target_link_libraries(mdmc ${CONAN_LIBS})
+target_link_libraries(mdmc ${CONAN_LIBS})
