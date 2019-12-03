@@ -10,12 +10,11 @@
 #include "Phase.hpp"
 #include "PhaseManager.hpp"
 
-#include "GL/Scene.hpp"
 #include "GL/Shader.hpp"
 #include "GL/Program.hpp"
 #include "GL/Viewer.hpp"
 
-#include "Assets.hpp"
+#include "Minecraft/Assets.hpp"
 
 namespace mdmc
 {

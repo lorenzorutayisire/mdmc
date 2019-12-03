@@ -1,11 +1,11 @@
 #pragma once
 
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
-
 #include <memory>
 
 #include "Phase.hpp"
+
+#include <GL/glew.h>
+#include <GLFW/glfw3.h>
 
 class PhaseManager
 {
@@ -23,12 +23,12 @@ public:
 	{
 		if (this->phase)
 		{
-			this->phase->on_disable(this);
+			this->phase->on_disable(*this);
 		}
 		this->phase = std::shared_ptr<Phase>(phase);
 		if (this->phase)
 		{
-			this->phase->on_enable(this);
+			this->phase->on_enable(*this);
 		}
 	}
 
@@ -36,7 +36,7 @@ public:
 	{
 		if (this->phase)
 		{
-			this->phase->on_update(this, delta);
+			this->phase->on_update(*this, delta);
 		}
 	}
 
@@ -44,7 +44,7 @@ public:
 	{
 		if (this->phase)
 		{
-			this->phase->on_render(this);
+			this->phase->on_render(*this);
 		}
 	}
 
@@ -52,7 +52,7 @@ public:
 	{
 		if (this->phase)
 		{
-			this->phase->on_render_ui(this);
+			this->phase->on_render_ui(*this);
 		}
 	}
 };

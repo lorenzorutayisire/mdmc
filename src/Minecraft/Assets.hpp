@@ -8,12 +8,11 @@
 #include <filesystem>
 
 #include <GL/glew.h>
+
 #include <glm/glm.hpp>
 #include <glm/mat4x4.hpp>
 
 #include <rapidjson/document.h>
-
-#include "Renderable.hpp"
 
 namespace mdmc
 {
@@ -68,7 +67,7 @@ namespace mdmc
 		// Assets
 		// =====================================================================================
 
-		class Assets : public Renderable
+		class Assets
 		{
 		private:
 			std::filesystem::path base_path;

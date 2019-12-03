@@ -12,11 +12,15 @@
 
 #include "PhaseManager.hpp"
 
-#include "Routine/VisualizePhase.hpp"
-
 #include "Minecraft/TextureAsset.hpp"
 #include "Minecraft/Assets.hpp"
-#include "Minecraft/AssetsPhase.hpp"
+
+#include <assimp/scene.h>
+#include <assimp/Importer.hpp>
+#include <assimp/postprocess.h>
+
+#include "Scene/aiSceneRenderer.hpp"
+#include "Scene/ViewScenePhase.hpp"
 
 using namespace mdmc;
 
@@ -45,9 +49,8 @@ int main(int argc, char** argv)
 	}
 
 	// <model_path>
-	const std::string model_path = argv[1];
-	std::ifstream model_file(model_path);
-	if (!model_file.good())
+	const std::filesystem::path model_path = argv[1];
+	if (!std::filesystem::exists(model_path))
 	{
 		std::cerr << "Can't open file at: " << model_path << std::endl;
 		return 2;
@@ -127,25 +130,32 @@ int main(int argc, char** argv)
 	ImGui_ImplOpenGL3_Init("#version 330");
 
 
-	// Minecraft loading.
+	/* Minecraft loading */
+	//Minecraft::Assets assets("tmp/mc_assets", "1.14.4");
+	//assets.retrieve();
+	//assets.load();
 
-	Minecraft::Assets assets("tmp/mc_assets", "1.14.4");
-	assets.retrieve();
-	assets.load();
+	/* Scene loading */
+	Assimp::Importer importer;
+	const aiScene* scene = importer.ReadFile(model_path.u8string().c_str(), aiProcess_Triangulate | aiProcess_FlipUVs);
+	if (scene == nullptr)
+	{
+		std::cerr << importer.GetErrorString() << std::endl;
+		return 1;
+	}
 
-	// Scene loading.
+	aiSceneRenderer scene_renderer(scene, model_path.parent_path());
 
 	PhaseManager phase_manager(window);
-
-	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-	phase_manager.set_phase(new VisualizePhase(&assets, 2, minecraft_asset_file));
+	phase_manager.set_phase(new ViewScenePhase(scene_renderer));
 
 	bool show_demo_window = true;
 
 	while (!glfwWindowShouldClose(window))
 	{
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+		glClearColor(0.5, 0.5, 0.5, 0);
+		
 		// Update
 
 		glfwPollEvents();

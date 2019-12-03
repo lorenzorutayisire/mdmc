@@ -1,4 +1,6 @@
-#include "AssetsPhase.hpp"
+#include "ViewAssetsPhase.hpp"
+
+#include <GL/glew.h>
 
 #include <imgui.h>
 

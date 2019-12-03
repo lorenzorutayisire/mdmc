@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include <GL/glew.h>
+
 #include "GL/Program.hpp"
 
 #include "Phase.hpp"
