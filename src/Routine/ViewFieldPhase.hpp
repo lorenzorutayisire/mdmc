@@ -2,24 +2,26 @@
 
 #include <memory>
 
+#include <GL/glew.h>
+
 #include "Phase.hpp"
 #include "PhaseManager.hpp"
 
 #include "GL/Viewer.hpp"
-#include "aiSceneRenderer.hpp"
+#include "Voxelizer/Voxelizer.hpp"
 
-using namespace mdmc;
-
-class ViewScenePhase : public Phase
+class ViewFieldPhase : public Phase
 {
 private:
 	GLuint program;
 
-	std::shared_ptr<const aiSceneRenderer> scene_renderer;
+	std::shared_ptr<const Voxelizer::Field> field;
 	Viewer viewer;
 
+	char camera_mode;
+
 public:
-	ViewScenePhase(const aiSceneRenderer& scene_renderer);
+	ViewFieldPhase(std::shared_ptr<const Voxelizer::Field> field);
 
 	void on_enable(PhaseManager& phase_manager);
 

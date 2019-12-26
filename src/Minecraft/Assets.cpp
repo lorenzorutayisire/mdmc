@@ -206,15 +206,7 @@ auto orientation_by_name = std::unordered_map<std::string, ModelFaceOrientation>
 	{"north", NORTH},
 };
 
-int Assets::load_model_element(
-	const std::unordered_map<std::string, std::string>& textures_variables,
-	const Atlas& atlas,
-
-	const ModelElement& element,
-
-	glm::mat4 transformation,
-	std::vector<GLfloat>& vertices
-)
+int Assets::load_model_element(const std::unordered_map<std::string, std::string>& textures_variables, const Atlas& atlas, const ModelElement& element, glm::mat4 transformation, std::vector<GLfloat>& vertices)
 {
 	if (element.HasMember("rotation"))
 	{

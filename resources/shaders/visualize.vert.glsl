@@ -6,7 +6,7 @@ layout(location = 2) in vec2 tex_coord;
 layout(location = 3) in vec4 color;
 
 layout(location = 4) uniform mat4 u_transform;
-uniform mat4 u_camera;
+layout(location = 5) uniform mat4 u_camera;
 
 out vec2 v_tex_coord;
 out vec4 v_color;

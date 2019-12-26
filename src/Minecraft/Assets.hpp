@@ -48,7 +48,6 @@ namespace mdmc
 			SOUTH
 		};
 
-
 		using ModelFace = rapidjson::Value::Object;
 
 		using ModelElement = rapidjson::Value::Object;

@@ -19,8 +19,8 @@
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 
-#include "Scene/aiSceneRenderer.hpp"
-#include "Scene/ViewScenePhase.hpp"
+#include "Voxelizer/aiSceneWrapper.hpp"
+#include "Routine/ViewFieldPhase.hpp"
 
 using namespace mdmc;
 
@@ -76,12 +76,14 @@ int main(int argc, char** argv)
 
 	// <minecraft_version>
 	const std::string minecraft_version = argv[3];
+	
+	/*
 	std::ifstream minecraft_asset_file("resources/minecraft_assets/" + minecraft_version + ".bin", std::ios::binary);
 	if (!minecraft_asset_file.good())
 	{
 		std::cerr << "Unsupported Minecraft version: " + minecraft_version + ".";
 		return 4;
-	}
+	}*/
 
 	/* INIT */
 	// Initializes GLFW & GLEW stuff.
@@ -144,10 +146,10 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
-	aiSceneRenderer scene_renderer(scene, model_path.parent_path());
+	auto field = std::make_shared<aiSceneWrapper>(scene, model_path.parent_path());
 
 	PhaseManager phase_manager(window);
-	phase_manager.set_phase(new ViewScenePhase(scene_renderer));
+	phase_manager.set_phase(new ViewFieldPhase(field));
 
 	bool show_demo_window = true;
 

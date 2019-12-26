@@ -1,4 +1,4 @@
-#include "aiSceneRenderer.hpp"
+#include "aiSceneWrapper.hpp"
 
 #include <utility>
 #include <iostream>
@@ -11,12 +11,31 @@
 
 using namespace mdmc;
 
-aiSceneRenderer::aiSceneRenderer(const aiScene* scene, const std::filesystem::path& textures_path)
+void test_min_max(const aiMesh* mesh, const aiMatrix4x4& transform, glm::vec3& min, glm::vec3& max)
 {
+	for (unsigned int i = 0; i < mesh->mNumVertices; i++)
+	{
+		auto v = transform * mesh->mVertices[i]; // min/max must be tested on the transformed Mesh.
+		
+		if (v.x < min.x) min.x = v.x;
+		if (v.y < min.y) min.y = v.y;
+		if (v.z < min.z) min.z = v.z;
+
+		if (v.x > max.x) max.x = v.x;
+		if (v.y > max.y) max.y = v.y;
+		if (v.z > max.z) max.z = v.z;
+	}
+}
+
+aiSceneWrapper::aiSceneWrapper(const aiScene* scene, const std::filesystem::path& textures_path)
+{
+	this->min = glm::vec3(0);
+	this->max = glm::vec3(0);
+
 	this->bake_node(scene->mRootNode, scene, aiMatrix4x4(), textures_path);
 }
 
-void aiSceneRenderer::bake_node(const aiNode* node, const aiScene* scene, aiMatrix4x4 transformation, const std::filesystem::path& textures_path)
+void aiSceneWrapper::bake_node(const aiNode* node, const aiScene* scene, aiMatrix4x4 transformation, const std::filesystem::path& textures_path)
 {
 	transformation *= node->mTransformation;
 
@@ -28,14 +47,10 @@ void aiSceneRenderer::bake_node(const aiNode* node, const aiScene* scene, aiMatr
 
 }
 
-void aiSceneRenderer::bake_mesh(const aiMesh* mesh, const aiScene* scene, aiMatrix4x4 transformation, const std::filesystem::path& textures_path)
+void aiSceneWrapper::bake_mesh(const aiMesh* mesh, const aiScene* scene, aiMatrix4x4 transformation, const std::filesystem::path& textures_path)
 {
 	BakedMesh baked_mesh;
 	aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-
-	/* ================================================================= */
-	/* Transformation */
-	baked_mesh.transformation = transformation.Transpose();
 
 	/* ================================================================= */
 	/* VAO/VBO */
@@ -53,6 +68,11 @@ void aiSceneRenderer::bake_mesh(const aiMesh* mesh, const aiScene* scene, aiMatr
 	glVertexAttribPointer(AttributeLayout::POSITION, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	test_min_max(mesh, transformation, this->min, this->max);
+
+	/* Transformation */
+	baked_mesh.transformation = transformation.Transpose();
 
 	/* NORMAL */
 
@@ -188,7 +208,7 @@ void aiSceneRenderer::bake_mesh(const aiMesh* mesh, const aiScene* scene, aiMatr
 	this->baked_meshes.push_back(baked_mesh);
 }
 
-void aiSceneRenderer::render() const
+void aiSceneWrapper::render() const
 {
 	for (auto& baked_mesh : this->baked_meshes)
 	{
@@ -196,11 +216,11 @@ void aiSceneRenderer::render() const
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, baked_mesh.texture);
 
-		/* Color */
+		// u_color
 		auto& color = baked_mesh.color;
-		glUniform4f(3, color.r, color.g, color.b, color.a);
+		glUniform4f(6, color.r, color.g, color.b, color.a);
 
-		/* Transformation */
+		// u_transform
 		glUniformMatrix4fv(4, 1, GL_FALSE, baked_mesh.transformation[0]);
 
 		/* VAO */
@@ -210,4 +230,8 @@ void aiSceneRenderer::render() const
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, baked_mesh.ebo);
 		glDrawElements(GL_TRIANGLES, baked_mesh.elements_count, GL_UNSIGNED_INT, NULL);
 	}
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindVertexArray(0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
