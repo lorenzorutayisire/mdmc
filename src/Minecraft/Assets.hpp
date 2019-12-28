@@ -14,6 +14,8 @@
 
 #include <rapidjson/document.h>
 
+#include "Voxelizer/Voxelizer.hpp"
+
 namespace mdmc
 {
 	namespace Minecraft
@@ -66,7 +68,7 @@ namespace mdmc
 		// Assets
 		// =====================================================================================
 
-		class Assets
+		class Assets : public Voxelizer::Field
 		{
 		private:
 			std::filesystem::path base_path;
@@ -138,7 +140,7 @@ namespace mdmc
 			void retrieve();
 			void load();
 
-			void render();
+			void render() const override;
 		};
 	}
 }

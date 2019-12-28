@@ -6,6 +6,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "Minecraft/Assets.hpp"
+
+
 // ================================================================================================
 // Guideline Cube
 // ================================================================================================
@@ -113,6 +116,14 @@ void ViewFieldPhase::on_update(PhaseManager& phase_manager, float delta)
 
 	if (glfwGetKey(phase_manager.get_window(), GLFW_KEY_C) == GLFW_PRESS)
 		this->camera_mode = 'c';
+
+	if (glfwGetKey(phase_manager.get_window(), GLFW_KEY_ENTER) == GLFW_PRESS)
+	{
+		auto assets = std::make_shared<mdmc::Minecraft::Assets>("tmp/mc_assets", "1.14");
+		assets->load();
+
+		this->field = assets;
+	}
 }
 
 void ViewFieldPhase::on_render(PhaseManager& phase_manager)

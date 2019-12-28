@@ -6,11 +6,11 @@ in vec2 g_tex_coord;
 flat in int g_axis;
 flat in vec4 g_aabb;
 
-uniform vec4 u_color;
-layout(binding = 0) uniform sampler2D u_texture2d;
+layout(location = 6) uniform vec4 u_color;
+layout(location = 7, binding = 0) uniform sampler2D u_texture2d;
 
 layout(location = 5, binding = 5, rgba32f) uniform image3D u_voxel;
-layout(location = 2) uniform float u_voxel_size;
+uniform float u_voxel_size;
 
 void main()
 {

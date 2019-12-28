@@ -27,6 +27,7 @@ struct Voxelizer
 		glm::mat4 z_proj() const;
 
 		virtual void render() const = 0;
+		void test_render(int what) const;
 	};
 
 	struct Volume
@@ -34,7 +35,7 @@ struct Voxelizer
 		unsigned int side;
 		GLuint texture3d;
 
-		Volume();
+		Volume(unsigned int side);
 		~Volume();
 	};
 

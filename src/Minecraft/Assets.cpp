@@ -12,6 +12,7 @@
 #include <rapidjson/istreamwrapper.h>
 
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #define TEXTURES_PATH(path)		  (path / "textures")
 #define TEXTURES_BLOCK_PATH(path) (TEXTURES_PATH(path) / "block")
@@ -58,7 +59,7 @@ Assets::Assets(const std::filesystem::path& base_path, const std::string& versio
 
 const std::filesystem::path Assets::path() const
 {
-	return this->base_path / version / "assets" / "minecraft";
+	return this->base_path / this->version / "assets" / "minecraft";
 }
 
 const Block& Assets::get_block(size_t id) const
@@ -84,6 +85,93 @@ GLuint Assets::get_vbo() const
 size_t Assets::get_vertices_count() const
 {
 	return this->vertices_count;
+}
+
+void put_vertex_at(
+	const Atlas& atlas,
+	const Texture& texture,
+	
+	const ModelFace& face,
+	ModelFaceOrientation face_orientation,
+	
+	const rapidjson::Value::Array& from,
+	const rapidjson::Value::Array& to,
+	
+	glm::mat4 transform,
+	
+	bool i,
+	bool j,
+	
+	std::vector<GLfloat>& vertices
+)
+{
+
+	glm::vec4 position;
+	glm::vec2 uv;
+
+	/* Position */
+	if (face_orientation / 2 == 0)
+	{
+		position = glm::vec4(
+			face_orientation % 2 == 1 ? to[0].GetFloat() : from[0].GetFloat(),
+			j ? to[1].GetFloat() : from[1].GetFloat(),
+			i ? to[2].GetFloat() : from[2].GetFloat(),
+			1
+		);
+
+		uv.x = position.z;
+		uv.y = position.y;
+	}
+	else if (face_orientation / 2 == 1)
+	{
+		position = glm::vec4(
+			j ? to[0].GetFloat() : from[0].GetFloat(),
+			face_orientation % 2 == 1 ? to[1].GetFloat() : from[1].GetFloat(),
+			i ? to[2].GetFloat() : from[2].GetFloat(),
+			1
+		);
+
+		uv.x = position.x;
+		uv.y = position.z;
+	}
+	else if (face_orientation / 2 == 2)
+	{
+		position = glm::vec4(
+			j ? to[0].GetFloat() : from[0].GetFloat(),
+			i ? to[1].GetFloat() : from[1].GetFloat(),
+			face_orientation % 2 == 1 ? to[2].GetFloat() : from[2].GetFloat(),
+			1
+		);
+
+		uv.x = position.x;
+		uv.y = position.y;
+	}
+
+	position = transform * position;
+
+	vertices.push_back(position.x);
+	vertices.push_back(position.y);
+	vertices.push_back(position.z);
+
+	/* UV */
+	if (face.HasMember("uv"))
+	{
+		uv = glm::vec2(
+			16 - face["uv"].GetArray()[i * 2].GetFloat(),
+			16 - face["uv"].GetArray()[j * 2 + 1].GetFloat()
+		);
+	}
+
+	// Atlas-absolute UV
+	uv.x += texture.x;
+	uv.y += texture.y;
+
+	// Normalize UV (previously were Minecraft pixels 0->16)
+	uv.x /= (float)atlas.w;
+	uv.y /= (float)atlas.h;
+
+	vertices.push_back(uv.x);
+	vertices.push_back(uv.y);
 }
 
 int Assets::load_model_face(
@@ -119,82 +207,16 @@ int Assets::load_model_face(
 	auto from = element["from"].GetArray();
 	auto to = element["to"].GetArray();
 
-	for (auto i = 0; i < 2; i++)
-	{
-		for (auto j = 0; j < 2; j++)
-		{
-			auto k = abs(i - j);
+	// Shitty functions, I know.
+	put_vertex_at(atlas, texture, face, face_orientation, from, to, transformation, false, false, vertices);
+	put_vertex_at(atlas, texture, face, face_orientation, from, to, transformation, false, true, vertices);
+	put_vertex_at(atlas, texture, face, face_orientation, from, to, transformation, true, true, vertices);
 
-			glm::vec4 position;
-			glm::vec2 uv;
+	put_vertex_at(atlas, texture, face, face_orientation, from, to, transformation, false, false, vertices);
+	put_vertex_at(atlas, texture, face, face_orientation, from, to, transformation, true, true, vertices);
+	put_vertex_at(atlas, texture, face, face_orientation, from, to, transformation, true, false, vertices);
 
-			/* Position */
-			if (face_orientation / 2 == 0)
-			{
-				position = glm::vec4(
-					face_orientation % 2 == 1 ? to[0].GetFloat() : from[0].GetFloat(),
-					k ? to[1].GetFloat() : from[1].GetFloat(),
-					i ? to[2].GetFloat() : from[2].GetFloat(),
-					1
-				);
-
-				uv.x = position.z;
-				uv.y = position.y;
-			}
-			else if (face_orientation / 2 == 1)
-			{
-				position = glm::vec4(
-					k ? to[0].GetFloat() : from[0].GetFloat(),
-					face_orientation % 2 == 1 ? to[1].GetFloat() : from[1].GetFloat(),
-					i ? to[2].GetFloat() : from[2].GetFloat(),
-					1
-				);
-
-				uv.x = position.x;
-				uv.y = position.z;
-			}
-			else if (face_orientation / 2 == 2)
-			{
-				position = glm::vec4(
-					k ? to[0].GetFloat() : from[0].GetFloat(),
-					i ? to[1].GetFloat() : from[1].GetFloat(),
-					face_orientation % 2 == 1 ? to[2].GetFloat() : from[2].GetFloat(),
-					1
-				);
-
-				uv.x = position.x;
-				uv.y = position.y;
-			}
-
-			position = transformation * position;
-
-			vertices.push_back(position.x);
-			vertices.push_back(position.y);
-			vertices.push_back(position.z);
-
-			/* UV */
-			if (face.HasMember("uv"))
-			{
-				uv = glm::vec2(
-					16 - face["uv"].GetArray()[i * 2].GetFloat(),
-					16 - face["uv"].GetArray()[k * 2 + 1].GetFloat()
-				);
-			}
-
-			// Atlas-absolute UV
-			uv.x += texture.x;
-			uv.y += texture.y;
-
-			// Normalize UV (previously were Minecraft pixels 0->16)
-			uv.x /= (float)atlas.w;
-			uv.y /= (float)atlas.h;
-
-			vertices.push_back(uv.x);
-			vertices.push_back(uv.y);
-		}
-	}
-
-	return 4;
+	return 6;
 }
 
 auto orientation_by_name = std::unordered_map<std::string, ModelFaceOrientation>{
@@ -400,7 +422,7 @@ void Assets::load_block_states(const Atlas& atlas, bool forced)
 	std::vector<GLfloat> vertices;
 	this->vertices_count = 0;
 
-	uint32_t blocks_count = 0;
+	unsigned int blocks_count = 0;
 
 	for (auto& entry : std::filesystem::directory_iterator(BLOCK_STATES_PATH(this->path())))
 	{
@@ -419,8 +441,16 @@ void Assets::load_block_states(const Atlas& atlas, bool forced)
 		{
 			auto variant = variant_member.value.IsArray() ? variant_member.value.GetArray()[0].GetObject() : variant_member.value.GetObject();
 
+			// Translates the block to its XYZ position based on its ID.
+			// The generated cube will be 16x_x16 thick (_ means it goes away infinitely with Y).
+
 			glm::mat4 transformation(1.0f);
-			transformation = glm::translate(transformation, glm::vec3(0.0f, 0.0f, 16 * blocks_count));
+
+			float t_x = (blocks_count % 16);
+			float t_y = (blocks_count / (16 * 16));
+			float t_z = (blocks_count / 16) % 16;
+
+			transformation = glm::translate(transformation, glm::vec3(t_x * 16 * 2, t_y * 16 * 2, t_z * 16 * 2));
 
 			// Translates the block to its own center in order to rotate around it.
 			transformation = glm::translate(
@@ -466,8 +496,8 @@ void Assets::load_block_states(const Atlas& atlas, bool forced)
 
 			if (model_vertices_count < 0)
 			{
-				//std::cerr << "Block failed (probably due to an undefined texture): " << model_name << std::endl;
-				continue;
+				// Any block is supposed to fail.
+				throw;
 			}
 
 			blocks_count++;
@@ -485,6 +515,14 @@ void Assets::load_block_states(const Atlas& atlas, bool forced)
 	glGenBuffers(1, &this->vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
 	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(vertices[0]), vertices.data(), GL_STATIC_DRAW);
+
+	this->min = glm::vec3(0);
+
+	float sz_x = 16 * 32;
+	float sz_y = (blocks_count / (16 * 16)) * 32; // The Y coordinate of the last block * 16.
+	float sz_z = 16 * 32;
+
+	this->max = glm::vec3(sz_x, sz_y, sz_z);
 }
 
 void Assets::load()
@@ -497,14 +535,17 @@ void Assets::load()
 	json_cache.clear(); // We don't need this dirty cache anymore. TODO clean me.
 }
 
-void Assets::render()
+void Assets::render() const
 {
+	// Transform
+	glUniformMatrix4fv(4, 1, GL_FALSE, glm::value_ptr(glm::mat4(1.0f)));
+
 	/* Texture */
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, this->atlas);
 
 	/* Color */
-	glUniform4f(3, 1, 1, 1, 1);
+	glUniform4f(6, 1, 1, 1, 1);
 
 	/* VBO */
 	glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
@@ -517,5 +558,8 @@ void Assets::render()
 	glEnableVertexAttribArray(2);
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
 
-	glDrawArrays(GL_QUADS, 0, this->vertices_count);
+	glDrawArrays(GL_TRIANGLES, 0, this->vertices_count);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
 }

@@ -6,13 +6,8 @@
 #include <stdexcept>
 #include <iostream>
 
-#include <imgui.h>
-#include "imgui/imgui_impl_glfw.h"
-#include "imgui/imgui_impl_opengl3.h"
-
 #include "PhaseManager.hpp"
 
-#include "Minecraft/TextureAsset.hpp"
 #include "Minecraft/Assets.hpp"
 
 #include <assimp/scene.h>
@@ -22,23 +17,54 @@
 #include "Voxelizer/aiSceneWrapper.hpp"
 #include "Routine/ViewFieldPhase.hpp"
 
-using namespace mdmc;
+// RenderDoc
+#include <windows.h>
+#include "renderdoc_app.h"
 
-void GLAPIENTRY
-MessageCallback(GLenum source,
-	GLenum type,
-	GLuint id,
-	GLenum severity,
-	GLsizei length,
-	const GLchar* message,
-	const void* userParam)
+#define resolution 3
+
+#define DEBUG
+
+#define RDOC_API_CAPTURE(code) \
+	if (rdoc_api) rdoc_api->StartFrameCapture(NULL, NULL); \
+	code \
+	if (rdoc_api) rdoc_api->EndFrameCapture(NULL, NULL)
+
+using namespace mdmc;
+using namespace std;
+
+std::shared_ptr<const aiSceneWrapper> load_model(const filesystem::path& path)
 {
-	fprintf(stderr, "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n", (type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""), type, severity, message);
+	Assimp::Importer importer;
+	const aiScene* scene = importer.ReadFile(path.u8string().c_str(), aiProcess_Triangulate | aiProcess_FlipUVs);
+
+	if (scene == nullptr)
+		return nullptr;
+
+	return std::make_shared<aiSceneWrapper>(scene, path.parent_path());
+}
+
+std::shared_ptr<const Minecraft::Assets> load_assets(const filesystem::path& path, const string& version)
+{
+	auto assets = std::make_shared<Minecraft::Assets>(path, version);
+	assets->load();
+	return assets;
 }
 
 
 int main(int argc, char** argv)
 {
+	RENDERDOC_API_1_1_2* rdoc_api = NULL;
+
+	// At init, on windows
+	if (HMODULE mod = GetModuleHandleA("renderdoc.dll"))
+	{
+		pRENDERDOC_GetAPI RENDERDOC_GetAPI =
+			(pRENDERDOC_GetAPI)GetProcAddress(mod, "RENDERDOC_GetAPI");
+		int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_1_2, (void**)&rdoc_api);
+		assert(ret == 1);
+	}
+
 	/* ARGS */
 	// Gets from the command-line the required arguments.
 
@@ -49,7 +75,7 @@ int main(int argc, char** argv)
 	}
 
 	// <model_path>
-	const std::filesystem::path model_path = argv[1];
+	filesystem::path model_path = argv[1];
 	if (!std::filesystem::exists(model_path))
 	{
 		std::cerr << "Can't open file at: " << model_path << std::endl;
@@ -75,15 +101,12 @@ int main(int argc, char** argv)
 	const uint16_t height = (uint16_t)raw_height;
 
 	// <minecraft_version>
-	const std::string minecraft_version = argv[3];
-	
-	/*
-	std::ifstream minecraft_asset_file("resources/minecraft_assets/" + minecraft_version + ".bin", std::ios::binary);
-	if (!minecraft_asset_file.good())
+	filesystem::path mc_path(filesystem::path("tmp") / "mc_assets" / std::string(argv[3]));
+	if (!std::filesystem::exists(mc_path))
 	{
-		std::cerr << "Unsupported Minecraft version: " + minecraft_version + ".";
-		return 4;
-	}*/
+		std::cerr << mc_path << " not found." << std::endl;
+		return 2;
+	}
 
 	/* INIT */
 	// Initializes GLFW & GLEW stuff.
@@ -117,50 +140,68 @@ int main(int argc, char** argv)
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_TEXTURE_3D);
 
-	glEnable(GL_DEBUG_OUTPUT); // Enables OpenGL warning & error logging.
-	glDebugMessageCallback(MessageCallback, 0);
-
 	glfwShowWindow(window); // Now the window can be shown.
 
+	// Loading
 
-	// ImGui context setup.
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
+	auto model = load_model(model_path);
 
-	// Setup Platform/Renderer bindings.
-	ImGui_ImplGlfw_InitForOpenGL(window, true);
-	ImGui_ImplOpenGL3_Init("#version 330");
+	RDOC_API_CAPTURE(
+		model->render();
+	);
 
+	auto assets = load_assets(filesystem::path("tmp") / "mc_assets", "1.14");
 
-	/* Minecraft loading */
-	//Minecraft::Assets assets("tmp/mc_assets", "1.14.4");
-	//assets.retrieve();
-	//assets.load();
+	RDOC_API_CAPTURE(
+		assets->render();
+	);
 
-	/* Scene loading */
-	Assimp::Importer importer;
-	const aiScene* scene = importer.ReadFile(model_path.u8string().c_str(), aiProcess_Triangulate | aiProcess_FlipUVs);
-	if (scene == nullptr)
-	{
-		std::cerr << importer.GetErrorString() << std::endl;
-		return 1;
-	}
+	// Voxelization
 
-	auto field = std::make_shared<aiSceneWrapper>(scene, model_path.parent_path());
+	std::cout << "Voxelization process (height=" << height << ", resolution=" << resolution << ")..." << std::endl;
 
-	PhaseManager phase_manager(window);
-	phase_manager.set_phase(new ViewFieldPhase(field));
+	Voxelizer voxelizer;
+
+	RDOC_API_CAPTURE(
+		std::cout << "Voxelizing Model..." << std::endl;
+		auto model_volume = voxelizer.voxelize(model, height * resolution);
+		std::cout << "Done." << std::endl;
+	);
+
+	RDOC_API_CAPTURE(
+		std::cout << "Voxelizing Minecraft assets..." << std::endl;
+		auto assets_volume = voxelizer.voxelize(assets, (assets->size().y / 16) * resolution);
+		std::cout << "Done." << std::endl;
+	);
+
 
 	bool show_demo_window = true;
+
+	int w = 0;
+
+	int wi, he;
+	glfwGetWindowSize(window, &wi, &he);
+	glViewport(0, 0, wi, he);
 
 	while (!glfwWindowShouldClose(window))
 	{
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glClearColor(0.5, 0.5, 0.5, 0);
+		glClearColor(1, 1, 0, 0);
 		
 		// Update
 
 		glfwPollEvents();
+
+		if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
+			w = 0;
+
+		if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
+			w = 1;
+
+		if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS)
+			w = 2;
+
+		assets->test_render(w);
 
 		// Closes the window when ESCAPE key is pressed.
 		if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -168,28 +209,17 @@ int main(int argc, char** argv)
 			glfwSetWindowShouldClose(window, GLFW_TRUE);
 		}
 
-		phase_manager.on_update(1.0f);
+		glfwSwapBuffers(window);
+
+
+		//phase_manager.on_update(1.0f);
 
 		/* Rendering */
-		phase_manager.on_render();
+		//phase_manager.on_render();
 
-		/* UI Rendering (ImGui) */
-		ImGui_ImplOpenGL3_NewFrame();
-		ImGui_ImplGlfw_NewFrame();
-		ImGui::NewFrame();
+		//phase_manager.on_render_ui();
 
-		phase_manager.on_render_ui();
-
-		ImGui::Render();
-		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-		glfwSwapBuffers(window);
 	}
-
-	// ImGui cleanup
-	ImGui_ImplOpenGL3_Shutdown();
-	ImGui_ImplGlfw_Shutdown();
-	ImGui::DestroyContext();
 
 	glfwDestroyWindow(window);
 	glfwTerminate();

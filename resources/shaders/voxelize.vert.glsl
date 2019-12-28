@@ -3,7 +3,7 @@
 layout (location = 0) in vec3 position;
 layout (location = 2) in vec2 tex_coord;
 
-uniform mat4 u_transform;
+layout(location = 4) uniform mat4 u_transform;
 
 out vec3 v_position;
 out vec2 v_tex_coord;

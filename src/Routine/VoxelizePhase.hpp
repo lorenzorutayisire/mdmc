@@ -7,9 +7,7 @@
 #include "GL/Program.hpp"
 
 #include "Phase.hpp"
-#include "Voxelizer.hpp"
-
-#include "Minecraft/TextureAsset.hpp"
+#include "Voxelizer/Voxelizer.hpp"
 
 class VoxelizePhase : public Phase
 {

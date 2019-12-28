@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <fstream>
 
 
 // ================================================================================================
@@ -49,6 +50,57 @@ glm::mat4 Voxelizer::Field::z_proj() const
 {
 	glm::mat4 ortho = glm::ortho(0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 2.0f);
 	return ortho * glm::lookAt(glm::vec3(0, 0, 2), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)) * this->transform();
+}
+
+GLuint program2;
+
+bool init;
+
+void init_()
+{
+	program2 = glCreateProgram();
+
+	/* Vertex */
+	auto vertex = glCreateShader(GL_VERTEX_SHADER);
+	{
+		std::ifstream file("resources/shaders/visualize.vert.glsl");
+
+		std::string src((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+		const GLchar* src_ptr = src.c_str();
+
+		glShaderSource(vertex, 1, &src_ptr, nullptr);
+		glCompileShader(vertex);
+	}
+	glAttachShader(program2, vertex);
+
+	/* Fragment */
+	auto fragment = glCreateShader(GL_FRAGMENT_SHADER);
+	{
+		std::ifstream file("resources/shaders/visualize.frag.glsl");
+
+		std::string src((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+		const GLchar* src_ptr = src.c_str();
+
+		glShaderSource(fragment, 1, &src_ptr, nullptr);
+		glCompileShader(fragment);
+	}
+	glAttachShader(program2, fragment);
+
+	glLinkProgram(program2);
+}
+
+void Voxelizer::Field::test_render(int what) const
+{
+	if (!init)
+		init_();
+
+	glUseProgram(program2);
+
+	GLint location = glGetUniformLocation(program2, "u_camera");
+	glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(what == 0 ? this->y_proj() : (what == 1 ? this->x_proj() : this->z_proj())));
+
+	this->render();
+
 }
 
 // ================================================================================================
@@ -97,7 +149,7 @@ Voxelizer::Voxelizer()
 
 std::shared_ptr<const Voxelizer::Volume> Voxelizer::voxelize(std::shared_ptr<const Field> field, unsigned int height)
 {
-	float side = field->largest_side() / field->size().y;
+	unsigned int side = (height / field->size().y) * field->largest_side();
 
 	glEnable(GL_TEXTURE_3D);
 	glDisable(GL_CULL_FACE);
@@ -107,7 +159,6 @@ std::shared_ptr<const Voxelizer::Volume> Voxelizer::voxelize(std::shared_ptr<con
 	glViewport(0, 0, side, side);
 	
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	//glClearColor(0, 0, 0, 0);
 
 	this->program.use();
 
@@ -123,7 +174,7 @@ std::shared_ptr<const Voxelizer::Volume> Voxelizer::voxelize(std::shared_ptr<con
 	glUniform1f(this->program.get_uniform_location("u_voxel_size"), side);
 
 	// Voxel
-	auto volume = std::make_shared<Volume>();
+	auto volume = std::make_shared<Volume>(side);
 
 	glActiveTexture(GL_TEXTURE5);
 	glBindTexture(GL_TEXTURE_3D, volume->texture3d); // important!
@@ -144,7 +195,7 @@ std::shared_ptr<const Voxelizer::Volume> Voxelizer::voxelize(std::shared_ptr<con
 // Volume
 // ================================================================================================
 
-Voxelizer::Volume::Volume()
+Voxelizer::Volume::Volume(unsigned int side) : side(side)
 {
 	glGenTextures(1, &this->texture3d);
 	glBindTexture(GL_TEXTURE_3D, this->texture3d);
