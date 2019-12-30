@@ -9,6 +9,7 @@
 #include "PhaseManager.hpp"
 
 #include "Minecraft/Assets.hpp"
+#include "Minecraft/Mapper.hpp"
 
 #include <assimp/scene.h>
 #include <assimp/Importer.hpp>
@@ -21,7 +22,7 @@
 #include <windows.h>
 #include "renderdoc_app.h"
 
-#define resolution 3
+#define resolution 1
 
 #define DEBUG
 
@@ -30,10 +31,9 @@
 	code \
 	if (rdoc_api) rdoc_api->EndFrameCapture(NULL, NULL)
 
-using namespace mdmc;
 using namespace std;
 
-std::shared_ptr<const aiSceneWrapper> load_model(const filesystem::path& path)
+std::shared_ptr<const mdmc::aiSceneWrapper> load_model(const filesystem::path& path)
 {
 	Assimp::Importer importer;
 	const aiScene* scene = importer.ReadFile(path.u8string().c_str(), aiProcess_Triangulate | aiProcess_FlipUVs);
@@ -41,12 +41,12 @@ std::shared_ptr<const aiSceneWrapper> load_model(const filesystem::path& path)
 	if (scene == nullptr)
 		return nullptr;
 
-	return std::make_shared<aiSceneWrapper>(scene, path.parent_path());
+	return std::make_shared<mdmc::aiSceneWrapper>(scene, path.parent_path());
 }
 
-std::shared_ptr<const Minecraft::Assets> load_assets(const filesystem::path& path, const string& version)
+std::shared_ptr<const mdmc::Minecraft::Assets> load_assets(const filesystem::path& path, const string& version)
 {
-	auto assets = std::make_shared<Minecraft::Assets>(path, version);
+	auto assets = std::make_shared<mdmc::Minecraft::Assets>(path, version);
 	assets->load();
 	return assets;
 }
@@ -145,16 +145,7 @@ int main(int argc, char** argv)
 	// Loading
 
 	auto model = load_model(model_path);
-
-	RDOC_API_CAPTURE(
-		model->render();
-	);
-
 	auto assets = load_assets(filesystem::path("tmp") / "mc_assets", "1.14");
-
-	RDOC_API_CAPTURE(
-		assets->render();
-	);
 
 	// Voxelization
 
@@ -164,15 +155,28 @@ int main(int argc, char** argv)
 
 	RDOC_API_CAPTURE(
 		std::cout << "Voxelizing Model..." << std::endl;
-		auto model_volume = voxelizer.voxelize(model, height * resolution);
+		auto model_volume = voxelizer.voxelize(model, height, resolution);
 		std::cout << "Done." << std::endl;
 	);
 
 	RDOC_API_CAPTURE(
 		std::cout << "Voxelizing Minecraft assets..." << std::endl;
-		auto assets_volume = voxelizer.voxelize(assets, (assets->size().y / 16) * resolution);
+		auto assets_volume = voxelizer.voxelize(assets, assets->size().y / 16, resolution);
 		std::cout << "Done." << std::endl;
 	);
+
+	// Minecraft Mapping
+
+	Minecraft::Mapper mapper;
+
+	std::cout << "Minecraft mapping (blocks=" << assets->get_blocks().size() << ")..." << std::endl;
+
+	RDOC_API_CAPTURE(
+		Minecraft::BlocksPalette blocks_palette(1, assets->get_blocks().size(), assets_volume);
+		auto mapping_result = mapper.map(model_volume, blocks_palette);
+	);
+
+	std::cout << "Done." << std::endl;
 
 
 	bool show_demo_window = true;

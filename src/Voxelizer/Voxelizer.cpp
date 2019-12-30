@@ -10,7 +10,6 @@
 #include <iostream>
 #include <fstream>
 
-
 // ================================================================================================
 // Field
 // ================================================================================================
@@ -147,16 +146,17 @@ Voxelizer::Voxelizer()
 	}
 }
 
-std::shared_ptr<const Voxelizer::Volume> Voxelizer::voxelize(std::shared_ptr<const Field> field, unsigned int height)
+std::shared_ptr<const Voxelizer::Volume> Voxelizer::voxelize(std::shared_ptr<const Field> field, unsigned int height, unsigned int resolution)
 {
 	unsigned int side = (height / field->size().y) * field->largest_side();
+	unsigned int actual_side = side * resolution;
 
 	glEnable(GL_TEXTURE_3D);
 	glDisable(GL_CULL_FACE);
 	glDisable(GL_DEPTH_TEST);
 	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 
-	glViewport(0, 0, side, side);
+	glViewport(0, 0, actual_side, actual_side);
 	
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -171,18 +171,18 @@ std::shared_ptr<const Voxelizer::Volume> Voxelizer::voxelize(std::shared_ptr<con
 	glUniformMatrix4fv(this->program.get_uniform_location("u_z_ortho_projection"), 1, GL_FALSE, glm::value_ptr(field->z_proj()));
 
 	// Voxel Size
-	glUniform1f(this->program.get_uniform_location("u_voxel_size"), side);
+	glUniform1f(this->program.get_uniform_location("u_voxel_size"), actual_side);
 
 	// Voxel
-	auto volume = std::make_shared<Volume>(side);
+	auto volume = std::make_shared<Volume>(side, resolution);
 
 	glActiveTexture(GL_TEXTURE5);
-	glBindTexture(GL_TEXTURE_3D, volume->texture3d); // important!
-	glBindImageTexture(5, volume->texture3d, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA32F);
+	glBindTexture(GL_TEXTURE_3D, volume->texture3d);
+	glBindImageTexture(5, volume->texture3d, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA8);
 
 	field->render();
 
-	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // ?
 
 	glEnable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
@@ -195,7 +195,7 @@ std::shared_ptr<const Voxelizer::Volume> Voxelizer::voxelize(std::shared_ptr<con
 // Volume
 // ================================================================================================
 
-Voxelizer::Volume::Volume(unsigned int side) : side(side)
+Voxelizer::Volume::Volume(unsigned int side, unsigned int resolution) : side(side), resolution(resolution)
 {
 	glGenTextures(1, &this->texture3d);
 	glBindTexture(GL_TEXTURE_3D, this->texture3d);
@@ -207,7 +207,9 @@ Voxelizer::Volume::Volume(unsigned int side) : side(side)
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
-	glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA32F, this->side, this->side, this->side, 0, GL_RGBA, GL_FLOAT, NULL);
+	unsigned actual_side = side * resolution;
+
+	glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA8, actual_side, actual_side, actual_side, 0, GL_RGBA, GL_FLOAT, NULL);
 	glClearTexImage(this->texture3d, 0, GL_RGBA, GL_FLOAT, new float[4]{ 0, 0, 0, 0 });
 }
 

@@ -424,6 +424,9 @@ void Assets::load_block_states(const Atlas& atlas, bool forced)
 
 	unsigned int blocks_count = 0;
 
+	this->blocks_by_name.push_back(Block{"air", 0, 0});
+	blocks_count++;
+
 	for (auto& entry : std::filesystem::directory_iterator(BLOCK_STATES_PATH(this->path())))
 	{
 		auto path = entry.path();
@@ -505,6 +508,9 @@ void Assets::load_block_states(const Atlas& atlas, bool forced)
 			std::string variant_attr = variant_member.name.GetString();
 
 			auto block_name = blockstate_name + (variant_attr.empty() ? "" : "[" + variant_attr + "]");
+			if (block_name == "air")
+				continue; // Air is always with ID=0
+
 			this->blocks_by_name.push_back(Block{ block_name, vertices_count, (uint32_t)model_vertices_count });
 
 			std::copy(model_vertices.begin(), model_vertices.end(), std::back_inserter(vertices));

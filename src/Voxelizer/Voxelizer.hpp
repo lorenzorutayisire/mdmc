@@ -32,10 +32,11 @@ struct Voxelizer
 
 	struct Volume
 	{
-		unsigned int side;
+		unsigned int side, resolution;
+
 		GLuint texture3d;
 
-		Volume(unsigned int side);
+		Volume(unsigned int side, unsigned int resolution);
 		~Volume();
 	};
 
@@ -43,6 +44,6 @@ struct Voxelizer
 
 	Voxelizer();
 
-	std::shared_ptr<const Volume> voxelize(std::shared_ptr<const Field> field, unsigned int height);
+	std::shared_ptr<const Volume> voxelize(std::shared_ptr<const Field> field, unsigned int height, unsigned int resolution);
 };
 

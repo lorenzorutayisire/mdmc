@@ -9,7 +9,7 @@ flat in vec4 g_aabb;
 layout(location = 6) uniform vec4 u_color;
 layout(location = 7, binding = 0) uniform sampler2D u_texture2d;
 
-layout(location = 5, binding = 5, rgba32f) uniform image3D u_voxel;
+layout(location = 5, binding = 5, rgba8) uniform image3D u_voxel;
 uniform float u_voxel_size;
 
 void main()
