@@ -174,6 +174,8 @@ void aiSceneWrapper::bake_mesh(const aiMesh* mesh, const aiScene* scene, aiMatri
 	if (aiGetMaterialColor(material, AI_MATKEY_COLOR_DIFFUSE, &baked_mesh.color) != aiReturn_SUCCESS)
 		baked_mesh.color = aiColor4D(1.0f, 1.0f, 1.0f, 1.0f);
 
+	std::cout << "Color: " << baked_mesh.color.r << " " << baked_mesh.color.g << " " << baked_mesh.color.b << " " << baked_mesh.color.a << std::endl;
+
 	/* ================================================================= */
 	/* Texture */
 	
@@ -183,6 +185,8 @@ void aiSceneWrapper::bake_mesh(const aiMesh* mesh, const aiScene* scene, aiMatri
 	aiString texture_path;
 	if (aiGetMaterialTexture(material, aiTextureType_DIFFUSE, 0, &texture_path) == aiReturn_SUCCESS && texture_path.length > 0)
 	{
+		std::cout << "Texture2d: " << texture_path.C_Str() << std::endl;
+
 		int width, height;
 		uint8_t* image_data = stbi_load((textures_path / texture_path.C_Str()).u8string().c_str(), &width, &height, NULL, STBI_rgb_alpha);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data);
@@ -191,6 +195,8 @@ void aiSceneWrapper::bake_mesh(const aiMesh* mesh, const aiScene* scene, aiMatri
 	}
 	else
 	{
+		std::cout << "Texture2d: default" << std::endl;
+
 		GLfloat empty_image[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_FLOAT, empty_image);
 	}

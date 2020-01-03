@@ -19,7 +19,8 @@ uniform mat4 u_x_ortho_projection;
 uniform mat4 u_y_ortho_projection;
 uniform mat4 u_z_ortho_projection;
 
-layout(location = 2) uniform float u_voxel_size;
+uniform float u_viewport_side; // = largest_side * resolution
+layout(location = 2) uniform vec3 u_volume_size;
 
 void main()
 {
@@ -50,8 +51,8 @@ void main()
 
 	/* Enlarge */
 
-	float half_pixel = 1.0 / u_voxel_size;
-	float pl = 1.4142135637309 / u_voxel_size;
+	float half_pixel = 1.0 / u_viewport_side;
+	float pl = 1.4142135637309 / u_viewport_side;
 	vec4 aabb;
 	
 	aabb.xy = p0.xy;

@@ -69,16 +69,16 @@ Mapper::~Mapper()
 Mapper::Result::Result(unsigned int side, unsigned int resolution)
 {
 	this->schematic = std::make_shared<Schematic>(side);
-	this->mapped_model = std::make_shared<Volume>(side, resolution);
+	this->mapped_model = std::make_shared<Volume>(glm::uvec3(side, side, side));
 }
 
 Mapper::Result Mapper::map(std::shared_ptr<const Volume> model, const BlocksPalette& blocks)
 {
-	Mapper::Result result(model->side, model->resolution);
+	Mapper::Result result(model->size.x, model->size.y); // size, resolution
 
 	glUseProgram(this->program);
 
-	glUniform1ui(0, model->resolution);
+	glUniform1ui(0, 2 /*resolution*/);
 	glUniform1ui(1, blocks.count);
 
 	/* model */
@@ -97,9 +97,9 @@ Mapper::Result Mapper::map(std::shared_ptr<const Volume> model, const BlocksPale
 	glActiveTexture(GL_TEXTURE3);
 	glBindImageTexture(3, result.schematic->texture3d, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
 
-	glDispatchCompute(model->side, model->side, model->side);
+	glDispatchCompute(model->size.x, model->size.y, model->size.z);
 
-	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
 	return result;
 }

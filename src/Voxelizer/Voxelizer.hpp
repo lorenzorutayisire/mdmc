@@ -32,11 +32,11 @@ struct Voxelizer
 
 	struct Volume
 	{
-		unsigned int side, resolution;
+		glm::uvec3 size;
 
 		GLuint texture3d;
 
-		Volume(unsigned int side, unsigned int resolution);
+		Volume(glm::uvec3 size);
 		~Volume();
 	};
 
