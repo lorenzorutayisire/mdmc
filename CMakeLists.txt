@@ -2,52 +2,28 @@
 
 project ("mdmc")
 
+set (CMAKE_CXX_STANDARD 17)
+
 # Loads the conan file and includes/links needed libraries.
 include("conanbuildinfo.cmake")
 conan_basic_setup()
+
+include_directories("src")
+include_directories("lib")
 
 # Puts all resources inside /bin/resources folder.
 file(GLOB RESOURCES "resources/*")
 file(COPY ${RESOURCES} DESTINATION "${CMAKE_BINARY_DIR}/bin/resources")
 
-add_executable (
-	mdmc
-	
-	# Main
-	"src/Main.cpp"
-	"src/Phase.hpp"
-	"src/PhaseManager.hpp"
-	"src/Voxelizer.hpp"
-	"src/Voxelizer.cpp"
-	
-	# Routine
-	"src/Routine/LoadingPhase.hpp"
-	"src/Routine/VisualizePhase.hpp"
-	"src/Routine/VoxelizePhase.hpp"
-	
-	# Minecraft
-	"src/Minecraft/TextureAsset.hpp"
-	"src/Minecraft/TextureAsset.cpp"
-
-	# GL
-	"src/GL/Camera.hpp"
-	"src/GL/Camera.cpp"
-	"src/GL/Color.hpp"
-	"src/GL/Mesh.hpp"
-	"src/GL/Mesh.cpp"
-	"src/GL/Program.hpp"
-	"src/GL/Program.cpp"
-	"src/GL/Scene.hpp"
-	"src/GL/Scene.cpp"
-	"src/GL/Shader.hpp"
-	"src/GL/Shader.cpp"
-	"src/GL/Viewer.hpp"
-	"src/GL/Viewer.cpp"
-
-	#"src/Phases/LoadScenePhase.hpp"
-	#"src/Phases/LoadScenePhase.cpp"
-	#"src/Phases/VisualizeScenePhase.hpp"
-	#"src/Phases/VisualizeScenePhase.cpp"
-	#"src/Phases/VoxelizeScenePhase.cpp"
+file(GLOB_RECURSE
+	SRC
+	"src/*.hpp" "src/*.cpp"
+	"lib/*.hpp" "lib/*.cpp"	
 )
- target_link_libraries(mdmc ${CONAN_LIBS})
+
+list(JOIN SRC "\n" SRC_DEBUG)
+message(${SRC_DEBUG})
+
+add_executable (mdmc ${SRC})
+
+target_link_libraries(mdmc ${CONAN_LIBS})

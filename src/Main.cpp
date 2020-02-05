@@ -5,42 +5,98 @@
 
 #include <stdexcept>
 #include <iostream>
+#include <memory>
 
-#include "PhaseManager.hpp"
-#include "Routine/LoadingPhase.hpp"
+#include <assimp/scene.h>
+#include <assimp/Importer.hpp>
+#include <assimp/postprocess.h>
 
-#include "Minecraft/TextureAsset.hpp"
+#include <windows.h>
+#include "renderdoc_app.h"
 
-void GLAPIENTRY
-MessageCallback(GLenum source,
-	GLenum type,
-	GLuint id,
-	GLenum severity,
-	GLsizei length,
-	const GLchar* message,
-	const void* userParam)
+#include "Minecraft/Assets.hpp"
+
+#include "Chunk.hpp"
+
+#include "Voxelizer/aiSceneWrapper.hpp"
+#include "Voxelizer/Voxelizer.hpp"
+
+#define MAX_SIZE_PER_CHUNK 1000000
+
+// RenderDoc
+
+#define DEBUG
+
+using namespace std;
+
+std::shared_ptr<const mdmc::aiSceneWrapper> load_model(const filesystem::path& path)
 {
-	fprintf(stderr, "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
-		(type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""),
-		type, severity, message);
+	Assimp::Importer importer;
+	const aiScene* scene = importer.ReadFile(path.u8string().c_str(), aiProcess_Triangulate | aiProcess_FlipUVs);
+
+	if (scene == nullptr)
+		return nullptr;
+
+	return std::make_shared<mdmc::aiSceneWrapper>(scene, path.parent_path());
 }
 
+std::shared_ptr<const mdmc::Minecraft::Assets> load_assets(const filesystem::path& path, const string& version)
+{
+	auto assets = std::make_shared<mdmc::Minecraft::Assets>(path, version);
+	assets->load();
+	return assets;
+}
+
+void test_voxelize(Voxelizer& voxelizer, std::shared_ptr<const Voxelizer::Field> model)
+{
+	int prev_frag = -1;
+
+	for (int height = 1; height <= 256; height++)
+	{
+		std::cout << "***" << std::endl;
+		for (int resolution = 1; resolution <= 9; resolution++)
+		{
+			float ratio = height / model->size().y;
+			glm::uvec3 size = glm::ceil(ratio * model->size());
+
+			unsigned int largest_side = glm::max(size.x, glm::max(size.y, size.z));
+			GLuint viewport_side = largest_side * resolution;
+
+			auto volume = voxelizer.voxelize(model, height, resolution);
+			std::cout <<
+				" - height: " << height <<
+				" - resolution: " << resolution <<
+				" - fragments: " << volume->count <<
+				" - viewport: " << viewport_side << "x" << viewport_side;
+
+			if (prev_frag > volume->count && resolution > 1)
+				std::cout << " <----";
+
+			prev_frag = volume->count;
+			std::cout << std::endl;
+		}
+	}
+}
+
+void test_sort(Voxelizer& voxelizer, std::shared_ptr<const Volume> volume)
+{
+	voxelizer.sort(volume);
+}
 
 int main(int argc, char** argv)
 {
 	/* ARGS */
 	// Gets from the command-line the required arguments.
 
-	if (argc != (1 + 3)) // The first is the name of the exec.
+	if (argc != (1 + 4)) // The first is the name of the exec.
 	{
-		std::cerr << "Wrong arguments: <model_path> <height> <minecraft_version>" << std::endl;
+		std::cerr << "Wrong arguments: <model_path> <height> <resolution> <minecraft_version>" << std::endl;
 		return 1;
 	}
 
 	// <model_path>
-	const std::string model_path = argv[1];
-	std::ifstream model_file(model_path);
-	if (!model_file.good())
+	filesystem::path model_path = argv[1];
+	if (!std::filesystem::exists(model_path))
 	{
 		std::cerr << "Can't open file at: " << model_path << std::endl;
 		return 2;
@@ -49,51 +105,40 @@ int main(int argc, char** argv)
 	// <height>
 	const int raw_height = atoi(argv[2]);
 
-#ifndef UNLIMITED_HEIGHT
-	if (raw_height > 256)
+	if (raw_height <= 0 || raw_height > 256)
 	{
-		std::cerr << "A Minecraft schematic can't be taller than 256 blocks." << std::endl;
+		std::cerr << "height can't be neither negative, null or higher than 256." << std::endl;
 		return 3;
 	}
-#endif
-	if (raw_height <= 0)
-	{
-		std::cerr << "A Minecraft schematic can't be negative or 0." << std::endl;
-		return 3;
-	}
-	
-	const uint16_t height = (uint16_t)raw_height;
 
-	// <minecraft_version>
-	const std::string minecraft_version = argv[3];
-	std::ifstream minecraft_asset_file("resources/minecraft_assets/" + minecraft_version + ".bin", std::ios::binary);
-	if (!minecraft_asset_file.good())
+	// <resolution>
+	int resolution = atoi(argv[3]);
+	if (resolution <= 0)
 	{
-		std::cerr << "Unsupported Minecraft version: " + minecraft_version + ".";
+		std::cerr << "resolution can't be neither negative, null or higher than 3." << std::endl;
 		return 4;
 	}
 
-	/* INIT */
-	// Initializes GLFW & GLEW stuff.
+	uint16_t height = (uint16_t)raw_height;
+
+	// <minecraft_version>
+	filesystem::path mc_path(filesystem::path("tmp") / "mc_assets" / std::string(argv[4]));
+
+	std::cout << "Input:"								<< std::endl;
+	std::cout << "height: " << height					<< std::endl;
+	std::cout << "resolution: " << resolution			<< std::endl;
+	std::cout << "model_path: \"" << model_path << "\"" << std::endl;
+	std::cout << "minecraft_version: " << argv[4]		<< std::endl;
 
 	if (glfwInit() != GLFW_TRUE)
 	{
 		std::cerr << "GLFW failed to initialize." << std::endl;
-		return 5;
+		return 7;
 	}
 
-	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE); // Must be placed before window creation.
-
-	GLFWwindow* window = glfwCreateWindow(712, 712, "MDMC", NULL, NULL);
-
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4); // OpenGL 4.2 required to run Image load/store extension.
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
-
-	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE); // To make MacOS happy, should not be needed.
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // We don't want the old OpenGL. 
-	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
-
+	GLFWwindow* window = glfwCreateWindow(500, 500, "mdmc", NULL, NULL);
 	glfwMakeContextCurrent(window);
+	glfwHideWindow(window);
 
 	glewExperimental = GL_TRUE;
 	if (glewInit() != GLEW_OK)
@@ -103,35 +148,18 @@ int main(int argc, char** argv)
 	}
 
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_ALPHA_TEST);
 	glEnable(GL_TEXTURE_3D);
 
-	glEnable(GL_DEBUG_OUTPUT); // Enables OpenGL warning & error logging.
-	glDebugMessageCallback(MessageCallback, 0);
+	auto model = load_model(model_path);
 
-	glfwShowWindow(window); // Now the window can be shown.
+	Voxelizer voxelizer;
+	//test_voxelize(voxelizer, model);
 
-	/* LOADING */
+	auto volume = voxelizer.voxelize(model, height, resolution);
+	voxelizer.sort(volume);
 
-	PhaseManager phase_manager(window);
-
-	phase_manager.set_phase(new LoadingPhase(model_path.c_str(), height, minecraft_asset_file));
-	
 	while (!glfwWindowShouldClose(window))
 	{
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glClearColor(0, 0, 0.5, 0);
-
-		phase_manager.on_update(1.0f);
-		phase_manager.on_render();
-
-		// Closes the window when ESCAPE key is pressed.
-		if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-		{
-			glfwSetWindowShouldClose(window, GLFW_TRUE);
-		}
-
-		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
 
