@@ -2,12 +2,21 @@
 
 #include <memory>
 
-#include "GL/Program.hpp"
-
-#include <GLFW/glfw3.h>
+#include "gl.hpp"
 
 #include <glm/glm.hpp>
 #include <GL/glew.h>
+
+
+struct Volume
+{
+	GLuint resolution;
+
+	GLsizei count;
+	ShaderStorageBuffer data;
+
+	Volume();
+};
 
 struct Voxelizer
 {
@@ -27,23 +36,14 @@ struct Voxelizer
 		glm::mat4 z_proj() const;
 
 		virtual void render() const = 0;
-		void test_render(int what) const;
-	};
-
-	struct Volume
-	{
-		glm::uvec3 size;
-
-		GLuint texture3d;
-
-		Volume(glm::uvec3 size);
-		~Volume();
 	};
 
 	Program program;
 
 	Voxelizer();
 
-	std::shared_ptr<const Volume> voxelize(std::shared_ptr<const Field> field, unsigned int height, unsigned int resolution);
+	GLuint sort(std::shared_ptr<const Volume> volume);
+
+	std::shared_ptr<const Volume> voxelize(std::shared_ptr<const Field> field, GLuint height, GLuint resolution);
 };
 

@@ -1,14 +1,17 @@
-#include "Voxelizer.hpp"
+﻿#include "Voxelizer.hpp"
 
-#include <GLFW/glfw3.h>
-
-#include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
 #include <algorithm>
 #include <iostream>
 #include <fstream>
+
+#include "debug.hpp"
+
+#include <chrono>
+
+#define DEBUG
 
 // ================================================================================================
 // Field
@@ -51,92 +54,46 @@ glm::mat4 Voxelizer::Field::z_proj() const
 	return ortho * glm::lookAt(glm::vec3(0, 0, 2), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)) * this->transform();
 }
 
-GLuint program2;
-
-bool init;
-
-void init_()
-{
-	program2 = glCreateProgram();
-
-	/* Vertex */
-	auto vertex = glCreateShader(GL_VERTEX_SHADER);
-	{
-		std::ifstream file("resources/shaders/visualize.vert.glsl");
-
-		std::string src((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-		const GLchar* src_ptr = src.c_str();
-
-		glShaderSource(vertex, 1, &src_ptr, nullptr);
-		glCompileShader(vertex);
-	}
-	glAttachShader(program2, vertex);
-
-	/* Fragment */
-	auto fragment = glCreateShader(GL_FRAGMENT_SHADER);
-	{
-		std::ifstream file("resources/shaders/visualize.frag.glsl");
-
-		std::string src((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-		const GLchar* src_ptr = src.c_str();
-
-		glShaderSource(fragment, 1, &src_ptr, nullptr);
-		glCompileShader(fragment);
-	}
-	glAttachShader(program2, fragment);
-
-	glLinkProgram(program2);
-}
-
-void Voxelizer::Field::test_render(int what) const
-{
-	if (!init)
-		init_();
-
-	glUseProgram(program2);
-
-	GLint location = glGetUniformLocation(program2, "u_camera");
-	glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(what == 0 ? this->y_proj() : (what == 1 ? this->x_proj() : this->z_proj())));
-
-	this->render();
-
-}
+Volume::Volume() :
+	data(ShaderStorageBuffer::create())
+{}
 
 // ================================================================================================
 // Voxelizer
 // ================================================================================================
 
-Voxelizer::Voxelizer()
+Voxelizer::Voxelizer() :
+	program(Program::create())
 {
 	// Vertex
-	Shader v_shader(GL_VERTEX_SHADER);
-	v_shader.source_from_file("resources/shaders/voxelize.vert.glsl");
+	auto v_shader = Shader::create(GL_VERTEX_SHADER);
+	v_shader.source_from_file("resources/shaders/voxelize.vert");
 	if (!v_shader.compile())
 	{
 		std::cerr << v_shader.get_log() << std::endl;
 		throw;
 	}
-	this->program.attach(v_shader);
+	this->program.attach_shader(v_shader);
 
 	// Geometry
-	Shader g_shader(GL_GEOMETRY_SHADER);
-	g_shader.source_from_file("resources/shaders/voxelize.geom.glsl");
+	auto g_shader = Shader::create(GL_GEOMETRY_SHADER);
+	g_shader.source_from_file("resources/shaders/voxelize.geom");
 	if (!g_shader.compile())
 	{
 		std::cerr << g_shader.get_log() << std::endl;
 		throw;
 	}
-	this->program.attach(g_shader);
+	this->program.attach_shader(g_shader);
 
 	// Fragment
-	Shader f_shader(GL_FRAGMENT_SHADER);
-	f_shader.source_from_file("resources/shaders/voxelize.frag.glsl");
+	auto f_shader = Shader::create(GL_FRAGMENT_SHADER);
+	f_shader.source_from_file("resources/shaders/voxelize.frag");
 	if (!f_shader.compile())
 	{
 		std::cerr << f_shader.get_log() << std::endl;
 		throw;
 	}
-	this->program.attach(f_shader);
+	this->program.attach_shader(f_shader);
 
 	// Program
 	if (!this->program.link())
@@ -146,24 +103,100 @@ Voxelizer::Voxelizer()
 	}
 }
 
-std::shared_ptr<const Voxelizer::Volume> Voxelizer::voxelize(std::shared_ptr<const Field> field, unsigned int height, unsigned int resolution)
+struct Voxel
+{
+	GLuint position[4];
+	GLfloat color[4];
+};
+
+GLuint Voxelizer::sort(std::shared_ptr<const Volume> volume)
+{
+	auto program = Program::create();
+
+	{
+		auto shader = Shader::create(GL_COMPUTE_SHADER);
+		shader.source_from_file("resources/shaders/sort_blocks.comp");
+		shader.compile();
+
+		program.attach_shader(shader);
+		program.link();
+	}
+
+	program.use();
+
+	volume->data.bind(0);
+
+	auto swap_count_buf = AtomicCounter::create();
+	swap_count_buf.set_value(0);
+	swap_count_buf.bind(1);
+
+	GLuint swap_odd = 0, swap_count;
+	GLuint passes = 0;
+
+	while (true)
+	{
+		swap_count_buf.set_value(0);
+
+		glUniform1ui(program.get_uniform_location("volume_size"), volume->count);
+		glUniform1ui(program.get_uniform_location("resolution"), volume->resolution);
+		glUniform1ui(program.get_uniform_location("swap_odd"), swap_odd);
+
+		GLuint work_groups = floor(volume->count / 2);
+		glDispatchCompute(work_groups, 1, 1);
+
+		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT);
+
+		swap_count = swap_count_buf.get_value();
+		swap_odd = !swap_odd; // invert odd to even and viceversa
+
+		passes++;
+		if (passes % 10000 == 0)
+			std::cout << "passes: " << passes << " - " << "voxel count: " << volume->count << " - " << "swap count: " << swap_count << std::endl;
+
+		if (passes > 1 && swap_count == 0)
+			break;
+	}
+
+#ifdef DEBUG
+	auto debug = RenderDoc::init();
+	debug.start_capture();
+
+	glDispatchCompute(1, 1, 1);
+
+	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT);
+
+	debug.end_capture();
+#endif
+
+	return passes;
+}
+
+std::shared_ptr<const Volume> Voxelizer::voxelize(std::shared_ptr<const Field> field, GLuint height, GLuint resolution)
 {
 	float ratio = height / field->size().y;
-	glm::uvec3 size = glm::ceil((height / field->size().y) * field->size());
-	// size.y = height
+	glm::uvec3 size = glm::ceil(ratio * field->size());
 
 	unsigned int largest_side = glm::max(size.x, glm::max(size.y, size.z));
-	//size = glm::uvec3(largest_side, largest_side, largest_side);
 
-	glEnable(GL_TEXTURE_3D);
-	glDisable(GL_CULL_FACE);
+#ifdef GL_NV_conservative_raster
+	//glEnable(GL_CONSERVATIVE_RASTERIZATION_NV); TODO
+#endif
+
 	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+
 	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 
-	float viewport_side = largest_side * resolution;
+	GLsizei viewport_side = largest_side * resolution;
 	glViewport(0, 0, viewport_side, viewport_side);
 	
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	GLuint empty_framebuffer;
+	glGenFramebuffers(1, &empty_framebuffer);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, empty_framebuffer);
+
+	glFramebufferParameteri(GL_FRAMEBUFFER, GL_FRAMEBUFFER_DEFAULT_WIDTH, viewport_side);
+	glFramebufferParameteri(GL_FRAMEBUFFER, GL_FRAMEBUFFER_DEFAULT_HEIGHT, viewport_side);
 
 	this->program.use();
 
@@ -175,51 +208,55 @@ std::shared_ptr<const Voxelizer::Volume> Voxelizer::voxelize(std::shared_ptr<con
 	glUniformMatrix4fv(this->program.get_uniform_location("u_y_ortho_projection"), 1, GL_FALSE, glm::value_ptr(field->y_proj()));
 	glUniformMatrix4fv(this->program.get_uniform_location("u_z_ortho_projection"), 1, GL_FALSE, glm::value_ptr(field->z_proj()));
 
-	auto volume = std::make_shared<Volume>(size * resolution);
+	glm::vec3 vsize = size * resolution;
 
-	// Viewport side
-	glUniform1f(this->program.get_uniform_location("u_viewport_side"), viewport_side);
+	glUniform1f(this->program.get_uniform_location("u_viewport_side"), (GLfloat)viewport_side);
+	glUniform3f(this->program.get_uniform_location("u_volume_size"), vsize.x, vsize.y, vsize.z);
 
-	// Volume Size
-	glUniform3f(this->program.get_uniform_location("u_volume_size"), volume->size.x, volume->size.y, volume->size.z);
+	// ================================================================= fragments_size
 
-	// Voxel
-	glActiveTexture(GL_TEXTURE5);
-	glBindTexture(GL_TEXTURE_3D, volume->texture3d);
-	glBindImageTexture(5, volume->texture3d, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA8);
+	auto volume = std::make_shared<Volume>();
+
+	volume->resolution = resolution;
+
+	/* Count */
+	glUniform1ui(this->program.get_uniform_location("can_store"), 0);
+
+	auto count_buf = AtomicCounter::create();
+	count_buf.set_value(0);
+	count_buf.bind(1);
 
 	field->render();
 
-	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+	glMemoryBarrier(GL_ATOMIC_COUNTER_BARRIER_BIT);
 
-	glEnable(GL_CULL_FACE);
+	volume->count = count_buf.get_value();
+
+	/* Store */
+	auto debug = RenderDoc::init();
+	debug.start_capture();
+
+	glUniform1ui(this->program.get_uniform_location("can_store"), 1);
+
+	count_buf.set_value(0);
+	count_buf.bind(1);
+
+	volume->data.load_data(sizeof(Voxel) * volume->count, NULL, GL_DYNAMIC_DRAW);
+	volume->data.bind(2);
+	glClearNamedBufferData(volume->data.name, GL_R8UI, GL_R, GL_UNSIGNED_BYTE, NULL);
+
+	field->render();
+
+	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT);
+
+	debug.end_capture();
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glDeleteFramebuffers(1, &empty_framebuffer);
+
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
 	return volume;
-}
-
-// ================================================================================================
-// Volume
-// ================================================================================================
-
-Voxelizer::Volume::Volume(glm::uvec3 size) : size(size)
-{
-	glGenTextures(1, &this->texture3d);
-	glBindTexture(GL_TEXTURE_3D, this->texture3d);
-
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-	glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA8, size.x, size.y, size.z, 0, GL_RGBA, GL_FLOAT, NULL);
-	glClearTexImage(this->texture3d, 0, GL_RGBA, GL_FLOAT, new float[4]{ 0, 0, 0, 0 });
-}
-
-Voxelizer::Volume::~Volume()
-{
-	glDeleteTextures(1, &this->texture3d);
 }

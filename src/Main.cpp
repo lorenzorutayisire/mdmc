@@ -15,22 +15,17 @@
 #include "renderdoc_app.h"
 
 #include "Minecraft/Assets.hpp"
-#include "Minecraft/Mapper.hpp"
 
 #include "Chunk.hpp"
 
 #include "Voxelizer/aiSceneWrapper.hpp"
+#include "Voxelizer/Voxelizer.hpp"
 
 #define MAX_SIZE_PER_CHUNK 1000000
 
 // RenderDoc
 
 #define DEBUG
-
-#define RDOC_API_CAPTURE(code) \
-	if (rdoc_api) rdoc_api->StartFrameCapture(NULL, NULL); \
-	code \
-	if (rdoc_api) rdoc_api->EndFrameCapture(NULL, NULL)
 
 using namespace std;
 
@@ -52,19 +47,44 @@ std::shared_ptr<const mdmc::Minecraft::Assets> load_assets(const filesystem::pat
 	return assets;
 }
 
+void test_voxelize(Voxelizer& voxelizer, std::shared_ptr<const Voxelizer::Field> model)
+{
+	int prev_frag = -1;
+
+	for (int height = 1; height <= 256; height++)
+	{
+		std::cout << "***" << std::endl;
+		for (int resolution = 1; resolution <= 9; resolution++)
+		{
+			float ratio = height / model->size().y;
+			glm::uvec3 size = glm::ceil(ratio * model->size());
+
+			unsigned int largest_side = glm::max(size.x, glm::max(size.y, size.z));
+			GLuint viewport_side = largest_side * resolution;
+
+			auto volume = voxelizer.voxelize(model, height, resolution);
+			std::cout <<
+				" - height: " << height <<
+				" - resolution: " << resolution <<
+				" - fragments: " << volume->count <<
+				" - viewport: " << viewport_side << "x" << viewport_side;
+
+			if (prev_frag > volume->count && resolution > 1)
+				std::cout << " <----";
+
+			prev_frag = volume->count;
+			std::cout << std::endl;
+		}
+	}
+}
+
+void test_sort(Voxelizer& voxelizer, std::shared_ptr<const Volume> volume)
+{
+	voxelizer.sort(volume);
+}
+
 int main(int argc, char** argv)
 {
-	RENDERDOC_API_1_1_2* rdoc_api = NULL;
-
-	// At init, on windows
-	if (HMODULE mod = GetModuleHandleA("renderdoc.dll"))
-	{
-		pRENDERDOC_GetAPI RENDERDOC_GetAPI =
-			(pRENDERDOC_GetAPI)GetProcAddress(mod, "RENDERDOC_GetAPI");
-		int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_1_2, (void**)&rdoc_api);
-		assert(ret == 1);
-	}
-
 	/* ARGS */
 	// Gets from the command-line the required arguments.
 
@@ -92,22 +112,23 @@ int main(int argc, char** argv)
 	}
 
 	// <resolution>
-	const int resolution = atoi(argv[3]);
-	if (resolution <= 0 || resolution > 3)
+	int resolution = atoi(argv[3]);
+	if (resolution <= 0)
 	{
 		std::cerr << "resolution can't be neither negative, null or higher than 3." << std::endl;
 		return 4;
 	}
 
-	const uint16_t height = (uint16_t)raw_height;
+	uint16_t height = (uint16_t)raw_height;
 
 	// <minecraft_version>
 	filesystem::path mc_path(filesystem::path("tmp") / "mc_assets" / std::string(argv[4]));
-	if (!std::filesystem::exists(mc_path))
-	{
-		std::cerr << mc_path << " not found." << std::endl;
-		return 2;
-	}
+
+	std::cout << "Input:"								<< std::endl;
+	std::cout << "height: " << height					<< std::endl;
+	std::cout << "resolution: " << resolution			<< std::endl;
+	std::cout << "model_path: \"" << model_path << "\"" << std::endl;
+	std::cout << "minecraft_version: " << argv[4]		<< std::endl;
 
 	if (glfwInit() != GLFW_TRUE)
 	{
@@ -132,48 +153,10 @@ int main(int argc, char** argv)
 	auto model = load_model(model_path);
 
 	Voxelizer voxelizer;
+	//test_voxelize(voxelizer, model);
 
-	RDOC_API_CAPTURE(
-		std::shared_ptr<const Volume> volume = voxelizer.voxelize(model, height, resolution);
-	);
-
-	/*
-	unsigned int
-		model_volume_side = model->largest_side() * height / model->size().y, // resolution!
-		model_volume_size = pow(model_volume_side, 3);
-
-
-	float max_chunk_size_side = cbrt(MAX_SIZE_PER_CHUNK / (float)4) / (float)resolution;
-
-	unsigned int
-		chunk_volume_side = ceil(min((float) model_volume_side, max_chunk_size_side)),
-		chunk_volume_size = pow(chunk_volume_side, 3);
-
-	float chunk_side = chunk_volume_side * model->size().y / height;
-
-	Minecraft::Mapper mapper;
-
-	auto assets = load_assets(filesystem::path("tmp") / "mc_assets", "1.14");
-	auto assets_volume = voxelizer.voxelize(assets, assets->size().y / 16, resolution);
-	auto assets_palette = Minecraft::BlocksPalette(1, assets->get_blocks().size(), assets_volume);
-
-	unsigned int i = 0;
-
-	for (float x = model->min.x; x <= model->max.x; x += chunk_side)
-	{
-		for (float y = model->min.y; y <= model->max.y; y += chunk_side)
-		{
-			for (float z = model->min.z; z <= model->max.z; z += chunk_side)
-			{
-				auto chunk = std::make_shared<mdmc::Chunk>(model, glm::vec3(x, y, z), chunk_side);
-
-
-				auto mapper_result = mapper.map(chunk_volume, assets_palette);
-
-			}
-		}
-	}
-	*/
+	auto volume = voxelizer.voxelize(model, height, resolution);
+	voxelizer.sort(volume);
 
 	while (!glfwWindowShouldClose(window))
 	{

@@ -1,4 +1,4 @@
-# version 430
+# version 460
 
 in vec3 g_position;
 in vec2 g_tex_coord;
@@ -6,20 +6,34 @@ in vec2 g_tex_coord;
 flat in int g_axis;
 flat in vec4 g_aabb;
 
+layout (pixel_center_integer) in vec4 gl_FragCoord;
+
 layout(location = 6) uniform vec4 u_color;
 layout(location = 7, binding = 0) uniform sampler2D u_texture2d;
-
-layout(location = 5, binding = 5, rgba8) uniform image3D u_voxel;
 
 uniform float u_viewport_side; // = largest_side * resolution
 uniform vec3 u_volume_size;
 
+uniform int fragment_table_capacity;
+
+uniform uint can_store = 0;
+
+layout(binding = 1) uniform atomic_uint fragment_count;
+
+struct Voxel
+{
+	uvec4 position;
+	vec4 color;
+};
+
+layout(std430, binding = 2) buffer volume_buffer
+{
+	Voxel volume[];
+};
+
 void main()
 {
-    if (g_position.x < g_aabb.x || g_position.y < g_aabb.y || g_position.x > g_aabb.z || g_position.y > g_aabb.w)
-	   discard;
-
-	ivec3 position = ivec3(gl_FragCoord.xy, gl_FragCoord.z * u_viewport_side);
+	ivec4 position = ivec4(gl_FragCoord.xy, gl_FragCoord.z * u_viewport_side, 1);
 
 	switch (g_axis)
 	{
@@ -40,9 +54,14 @@ void main()
 
 	if (position.x > u_volume_size.x || position.y > u_volume_size.y || position.z > u_volume_size.z)
 		discard;
-
-	// Write the Voxel in the Volume.
+		
+	uint index = atomicCounterIncrement(fragment_count);
 
 	vec4 color = u_color * texture(u_texture2d, g_tex_coord);
-	imageStore(u_voxel, position, color);
+	
+	if (can_store == 1)
+	{
+		volume[index].position = position;
+		volume[index].color = color;
+	}
 }
