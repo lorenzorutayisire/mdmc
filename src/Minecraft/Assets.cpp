@@ -52,10 +52,10 @@ std::shared_ptr<rapidjson::Document> read_json(const std::filesystem::path& path
 // =====================================================================================
 
 Assets::Assets(const std::filesystem::path& base_path, const std::string& version) :
+	Field(glm::vec3(0), glm::vec3(0)),
 	base_path(base_path),
 	version(version)
-{
-}
+{}
 
 const std::filesystem::path Assets::path() const
 {

@@ -18,8 +18,15 @@
 
 #include "Chunk.hpp"
 
+#include "routine/phase.hpp"
+
 #include "Voxelizer/aiSceneWrapper.hpp"
-#include "Voxelizer/Voxelizer.hpp"
+#include "voxelizer.hpp"
+
+// imgui
+#include <imgui.h>
+#include <imgui/imgui_impl_glfw.h>
+#include <imgui/imgui_impl_opengl3.h>
 
 #define MAX_SIZE_PER_CHUNK 1000000
 
@@ -47,41 +54,6 @@ std::shared_ptr<const mdmc::Minecraft::Assets> load_assets(const filesystem::pat
 	return assets;
 }
 
-void test_voxelize(Voxelizer& voxelizer, std::shared_ptr<const Voxelizer::Field> model)
-{
-	int prev_frag = -1;
-
-	for (int height = 1; height <= 256; height++)
-	{
-		std::cout << "***" << std::endl;
-		for (int resolution = 1; resolution <= 9; resolution++)
-		{
-			float ratio = height / model->size().y;
-			glm::uvec3 size = glm::ceil(ratio * model->size());
-
-			unsigned int largest_side = glm::max(size.x, glm::max(size.y, size.z));
-			GLuint viewport_side = largest_side * resolution;
-
-			auto volume = voxelizer.voxelize(model, height, resolution);
-			std::cout <<
-				" - height: " << height <<
-				" - resolution: " << resolution <<
-				" - fragments: " << volume->count <<
-				" - viewport: " << viewport_side << "x" << viewport_side;
-
-			if (prev_frag > volume->count && resolution > 1)
-				std::cout << " <----";
-
-			prev_frag = volume->count;
-			std::cout << std::endl;
-		}
-	}
-}
-
-void test_sort(Voxelizer& voxelizer, std::shared_ptr<const Volume> volume)
-{
-	voxelizer.sort(volume);
-}
 
 int main(int argc, char** argv)
 {
@@ -124,11 +96,10 @@ int main(int argc, char** argv)
 	// <minecraft_version>
 	filesystem::path mc_path(filesystem::path("tmp") / "mc_assets" / std::string(argv[4]));
 
-	std::cout << "Input:"								<< std::endl;
-	std::cout << "height: " << height					<< std::endl;
-	std::cout << "resolution: " << resolution			<< std::endl;
-	std::cout << "model_path: \"" << model_path << "\"" << std::endl;
-	std::cout << "minecraft_version: " << argv[4]		<< std::endl;
+	std::cout << "Height: " << height << std::endl;
+	std::cout << "Resolution: " << resolution << std::endl;
+	std::cout << "Model path: " << model_path << std::endl;
+	std::cout << "Minecraft version: " << argv[4] << std::endl;
 
 	if (glfwInit() != GLFW_TRUE)
 	{
@@ -138,7 +109,6 @@ int main(int argc, char** argv)
 
 	GLFWwindow* window = glfwCreateWindow(500, 500, "mdmc", NULL, NULL);
 	glfwMakeContextCurrent(window);
-	glfwHideWindow(window);
 
 	glewExperimental = GL_TRUE;
 	if (glewInit() != GLEW_OK)
@@ -150,17 +120,38 @@ int main(int argc, char** argv)
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_TEXTURE_3D);
 
-	auto model = load_model(model_path);
+	ImGui::CreateContext();
 
-	Voxelizer voxelizer;
-	//test_voxelize(voxelizer, model);
+	ImGui::StyleColorsLight();
 
-	auto volume = voxelizer.voxelize(model, height, resolution);
-	voxelizer.sort(volume);
+	ImGui_ImplGlfw_InitForOpenGL(window, true);
+	ImGui_ImplOpenGL3_Init("#version 460");
+
+	Stage stage(window);
+
+	double prior_time = 0;
 
 	while (!glfwWindowShouldClose(window))
 	{
 		glfwPollEvents();
+
+		double time = glfwGetTime();
+
+		float delta = prior_time == 0 ? 0 : time - prior_time;
+		prior_time = time;
+
+		stage.update(delta);
+
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
+
+		stage.render();
+
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+		glfwSwapBuffers(window);
 	}
 
 	return 0;

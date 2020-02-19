@@ -12,7 +12,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp> 
 
-#include "Voxelizer.hpp"
+#include "voxelizer.hpp"
 
 namespace mdmc
 {
@@ -39,7 +39,7 @@ namespace mdmc
 		aiMatrix4x4 transformation;
 	};
 
-	class aiSceneWrapper : public Voxelizer::Field
+	class aiSceneWrapper : public Field
 	{
 	private:
 		std::vector<BakedMesh> baked_meshes;

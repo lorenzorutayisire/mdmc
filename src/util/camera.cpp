@@ -17,7 +17,7 @@
  */
 #define _USE_MATH_DEFINES
 #include <cmath>
-#include "Camera.hpp"
+#include "camera.hpp"
 #include <glm/gtc/matrix_transform.hpp>
 
 using namespace tdogl;

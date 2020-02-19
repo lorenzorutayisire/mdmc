@@ -12,6 +12,22 @@ using namespace glm;
 
 // ================================================================================================
 
+struct Volume
+{
+	const uvec3 size;
+	const Texture3d texture3d;
+
+	Volume(uvec3 size, GLuint texture3d);
+	Volume(const Volume&) = delete;
+
+	~Volume();
+
+	static Volume create(uvec3 size, GLenum format);
+};
+
+
+// ================================================================================================
+
 struct Voxelizer
 {
 private:

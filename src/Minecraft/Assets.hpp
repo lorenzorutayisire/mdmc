@@ -14,7 +14,7 @@
 
 #include <rapidjson/document.h>
 
-#include "Voxelizer/Voxelizer.hpp"
+#include "field.hpp"
 
 namespace mdmc
 {
@@ -68,7 +68,7 @@ namespace mdmc
 		// Assets
 		// =====================================================================================
 
-		class Assets : public Voxelizer::Field
+		class Assets : public Field
 		{
 		private:
 			std::filesystem::path base_path;

@@ -27,11 +27,9 @@ void test_min_max(const aiMesh* mesh, const aiMatrix4x4& transform, glm::vec3& m
 	}
 }
 
-aiSceneWrapper::aiSceneWrapper(const aiScene* scene, const std::filesystem::path& textures_path)
+aiSceneWrapper::aiSceneWrapper(const aiScene* scene, const std::filesystem::path& textures_path) :
+	Field(glm::vec3(0), glm::vec3(0))
 {
-	this->min = glm::vec3(0);
-	this->max = glm::vec3(0);
-
 	this->bake_node(scene->mRootNode, scene, aiMatrix4x4(), textures_path);
 }
 

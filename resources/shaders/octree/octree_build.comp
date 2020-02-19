@@ -1,0 +1,80 @@
+#version 460
+
+layout(binding = 0, rgba8) uniform image3D volume;
+layout(binding = 1, r32ui) uniform uimageBuffer octree;
+
+layout(binding = 2) uniform atomic_uint alloc_offset;
+
+uniform uint level;
+uniform uint volume_size; // 2^n
+
+uniform int write;
+
+uint get_node_child_offset(uvec3 voxel, uint level)
+{
+	// The absolute position of the node, in a grid of size 2^level.
+	uvec3 node_location = voxel * uint(pow(2, level + 1)) / volume_size;
+	
+	// The relative position of the node within the current parent node.
+	// From (0,0) to (1,1).
+	uvec3 node_offset = node_location % (level + 1);
+
+	// Flattens the relative position to a 1d index, that is the offset.
+	return node_offset.x + 2 * (node_offset.y + 2 * node_offset.z);
+}
+
+uint wrap_ptr(uint ptr)
+{
+	return ptr |= 0x80000000;
+}
+
+uint unwrap_ptr(uint raw_ptr)
+{
+	return raw_ptr & 0x7FFFFFFF;
+}
+
+uint wrap_color(vec4 color)
+{
+	return floatBitsToUint(color.r) << 24 | floatBitsToUint(color.g) << 16 | floatBitsToUint(color.b) << 8 | floatBitsToUint(color.a);
+}
+
+void main()
+{
+	uvec3 voxel = gl_GlobalInvocationID;
+
+	vec4 color = imageLoad(volume, ivec3(voxel));
+	if (color.a == 0)
+		return;
+
+	// 00000000 00000000 00000000 00000000 - null
+	// 10000000 00000000 00000000 00000000 - ptr
+	// 00000000 00000000 00000000 00000001 - color
+	
+	uint node_offset = 0;
+	for (uint j = 0; j <= level; j++)
+	{
+		uint child_offset = get_node_child_offset(voxel, j);
+		uint offset = node_offset + child_offset;
+
+		if (j == level)
+		{
+			uint data;
+			if (write == 0)
+			{
+				// If the write-mode is disabled, always goes forward for another allocation.
+				uint next_address = atomicCounterAdd(alloc_offset, 2 * 2 * 2);
+				data = wrap_ptr(next_address);
+			}
+			else
+				data = wrap_color(color);
+
+			// Writes the data only if the current offset wasn't written.
+			// It could happen when many voxels lie in the same node.
+			imageAtomicCompSwap(octree, int(offset), 0, data);
+			break;
+		}
+
+		// Steps forward to the child node.
+		node_offset = unwrap_ptr(imageLoad(octree, int(offset)).r);
+	}
+}

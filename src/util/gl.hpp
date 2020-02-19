@@ -5,12 +5,14 @@
 #include <string>
 
 // ================================================================================================
+// Shader
+// ================================================================================================
 
 struct Shader
 {
 	const GLuint id;
 
-	Shader(GLuint id);
+	Shader(GLenum type);
 	Shader(const Shader&) = delete;
 
 	~Shader();
@@ -20,17 +22,17 @@ struct Shader
 
 	bool compile();
 	std::string get_log();
-
-	static Shader create(GLenum type);
 };
 
+// ================================================================================================
+// Program
 // ================================================================================================
 
 struct Program
 {
 	const GLuint id;
 
-	Program(GLuint id);
+	Program();
 	Program(const Program&) = delete;
 	
 	~Program();
@@ -39,23 +41,25 @@ struct Program
 	void detach_shader(const Shader& shader);
 
 	bool link();
+
 	void use();
+	static void unuse();
 
 	std::string get_log();
 
 	GLint get_attrib_location(const GLchar* name);
 	GLint get_uniform_location(const GLchar* name);
-
-	static Program create();
 };
 
+// ================================================================================================
+// TextureBuffer
 // ================================================================================================
 
 struct TextureBuffer
 {
 	const GLuint buffer_name, texture_name;
 
-	TextureBuffer(GLuint buffer_name, GLuint texture_name);
+	TextureBuffer();
 	TextureBuffer(const TextureBuffer&) = delete;
 
 	~TextureBuffer();
@@ -68,6 +72,8 @@ struct TextureBuffer
 	static TextureBuffer create();
 };
 
+// ================================================================================================
+// AtomicCounter
 // ================================================================================================
 
 struct AtomicCounter
@@ -88,6 +94,8 @@ struct AtomicCounter
 };
 
 // ================================================================================================
+// SSBO
+// ================================================================================================
 
 struct ShaderStorageBuffer
 {
@@ -105,3 +113,46 @@ struct ShaderStorageBuffer
 	static ShaderStorageBuffer create();
 };
 
+// ================================================================================================
+// FrameBuffer
+// ================================================================================================
+
+struct FrameBuffer
+{
+	const GLuint name;
+
+	FrameBuffer(GLuint name);
+	~FrameBuffer();
+
+	FrameBuffer(const FrameBuffer&) = delete;
+	FrameBuffer(const FrameBuffer&&) = delete;
+
+	void set_default_size(GLuint width, GLuint height);
+
+	void use();
+	void unuse();
+
+	static FrameBuffer create();
+};
+
+// ================================================================================================
+// Texture3d
+// ================================================================================================
+
+struct Texture3d
+{
+private:
+	Texture3d(GLuint name);
+	
+public:
+	const GLuint name;
+
+	~Texture3d();
+
+	Texture3d(const Texture3d&) = delete;
+	Texture3d(const Texture3d&&) = delete;
+
+	void set_storage(GLenum format, GLuint width, GLuint height, GLuint depth);
+
+	static Texture3d create();
+};

@@ -1,6 +1,6 @@
 ﻿cmake_minimum_required (VERSION 3.8)
 
-project ("mdmc")
+project("mdmc")
 
 set (CMAKE_CXX_STANDARD 17)
 
@@ -8,7 +8,7 @@ set (CMAKE_CXX_STANDARD 17)
 include("conanbuildinfo.cmake")
 conan_basic_setup()
 
-include_directories("src")
+include_directories("src" ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
 include_directories("lib")
 
 # Puts all resources inside /bin/resources folder.

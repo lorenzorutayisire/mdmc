@@ -8,8 +8,6 @@ layout(location = 7) uniform sampler2D u_texture2d;
 
 out vec4 frag_color;
 
-
-
 void main()
 {
 	frag_color = u_color * v_color * texture(u_texture2d, v_tex_coord);

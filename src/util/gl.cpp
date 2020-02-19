@@ -3,12 +3,26 @@
 #include <fstream>
 #include <vector>
 
+GLuint gen_buffer()
+{
+	GLuint name;
+	glGenBuffers(1, &name);
+	return name;
+}
+
+GLuint gen_texture()
+{
+	GLuint name;
+	glGenTextures(1, &name);
+	return name;
+}
+
 // ================================================================================================
 // Shader
 // ================================================================================================
 
-Shader::Shader(GLuint id) :
-	id(id)
+Shader::Shader(GLenum type) :
+	id(glCreateShader(type))
 {}
 
 Shader::~Shader()
@@ -49,17 +63,12 @@ std::string Shader::get_log()
 	return std::string(log.begin(), log.end());
 }
 
-Shader Shader::create(GLenum type)
-{
-	return Shader(glCreateShader(type));
-}
-
 // ================================================================================================
 // Program
 // ================================================================================================
 
-Program::Program(GLuint id) :
-	id(id)
+Program::Program() :
+	id(glCreateProgram())
 {}
 
 Program::~Program()
@@ -91,6 +100,11 @@ void Program::use()
 	glUseProgram(this->id);
 }
 
+void Program::unuse()
+{
+	glUseProgram(0);
+}
+
 std::string Program::get_log()
 {
 	GLint log_length = 0;
@@ -112,18 +126,21 @@ GLint Program::get_uniform_location(const GLchar* name)
 	return glGetUniformLocation(this->id, name);
 }
 
-Program Program::create()
-{
-	return Program(glCreateProgram());
-}
-
 // ================================================================================================
 // TextureBuffer
 // ================================================================================================
 
-TextureBuffer::TextureBuffer(GLuint buffer_name, GLuint texture_name) :
-	buffer_name(buffer_name),
-	texture_name(texture_name)
+TextureBuffer::TextureBuffer() : 
+	buffer_name([]() {
+		GLuint name;
+		glGenBuffers(1, &name);
+		return name;
+	}()),
+	texture_name([]() {
+		GLuint name;
+		glGenTextures(1, &name);
+		return name;
+	}())
 {}
 
 TextureBuffer::~TextureBuffer()
@@ -209,7 +226,7 @@ AtomicCounter AtomicCounter::create()
 }
 
 // ================================================================================================
-// ShaderStorageBuffer
+// SSBO
 // ================================================================================================
 
 ShaderStorageBuffer::ShaderStorageBuffer(GLuint name) :
@@ -241,3 +258,72 @@ ShaderStorageBuffer ShaderStorageBuffer::create()
 	glGenBuffers(1, &name);
 	return ShaderStorageBuffer(name);
 }
+
+// ================================================================================================
+// FrameBuffer
+// ================================================================================================
+
+FrameBuffer::FrameBuffer(GLuint name) :
+	name(name)
+{}
+
+FrameBuffer::~FrameBuffer()
+{
+	glDeleteFramebuffers(1, &this->name);
+}
+
+void FrameBuffer::set_default_size(GLuint width, GLuint height)
+{
+	glBindFramebuffer(GL_FRAMEBUFFER, this->name);
+
+	glFramebufferParameteri(GL_FRAMEBUFFER, GL_FRAMEBUFFER_DEFAULT_WIDTH, width);
+	glFramebufferParameteri(GL_FRAMEBUFFER, GL_FRAMEBUFFER_DEFAULT_HEIGHT, height);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void FrameBuffer::use()
+{
+	glBindFramebuffer(GL_FRAMEBUFFER, this->name);
+}
+
+void FrameBuffer::unuse()
+{
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+FrameBuffer FrameBuffer::create()
+{
+	GLuint name;
+	glGenFramebuffers(1, &name);
+	return FrameBuffer(name);
+}
+
+// ================================================================================================
+// Texture3d
+// ================================================================================================
+
+Texture3d::Texture3d(GLuint name) :
+	name(name)
+{}
+
+Texture3d::~Texture3d()
+{
+	glDeleteTextures(1, &this->name);
+}
+
+void Texture3d::set_storage(GLenum format, GLuint width, GLuint height, GLuint depth)
+{
+	glBindTexture(GL_TEXTURE_3D, this->name);
+	glTexStorage3D(GL_TEXTURE_3D, 1, format, width, height, depth);
+
+	glBindTexture(GL_TEXTURE_3D, 0);
+}
+
+Texture3d Texture3d::create()
+{
+	GLuint name;
+	glGenTextures(1, &name);
+	return Texture3d(name);
+}
+
