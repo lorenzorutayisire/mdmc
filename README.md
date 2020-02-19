@@ -4,7 +4,7 @@ mdmc is a software able to convert your beautiful 3D model, into a Minecraft sch
 
 ![mdmc_preview](https://i.ibb.co/FKqdGnQ/mdmc-skull-2.png)
 
-## Version 0.1a
+## Version 1.0a
 
 mdmc will:
 * Load, from the specified Minecraft version, _only the full, equally faced, blocks_ (so dirt, wood, bedrock...).
@@ -14,7 +14,7 @@ mdmc will:
 * Show a preview of the voxelized model.
 * Show a preview of the Minecraft mapped model.
 
-## Version 0.2a (WIP)
+## Version 2.0a (WIP)
 * Download Minecraft assets from https://mcassets.cloud.
 * Load the entire Minecraft blocks assets (excluding block entities).
 * Use an higher resolution, which means more voxels will be used per block in order to decide which Minecraft model associate (similar to multisampling).
