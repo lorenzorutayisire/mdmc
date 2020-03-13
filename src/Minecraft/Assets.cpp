@@ -483,7 +483,7 @@ void Assets::load_block_states(const Atlas& atlas, bool forced)
 			transformation = glm::translate(
 				transformation,
 				glm::vec3(-8, -8, -8)
-			);
+			
 
 			std::vector<GLfloat> model_vertices;
 
