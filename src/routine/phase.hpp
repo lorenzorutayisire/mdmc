@@ -34,7 +34,7 @@ private:
 	std::shared_ptr<Phase> phase;
 
 public:
-	const GLFWwindow* window;
+	GLFWwindow* window;
 
 	Stage(GLFWwindow* window);
 

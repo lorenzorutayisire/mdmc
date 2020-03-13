@@ -4,7 +4,7 @@
 
 #define NOMINMAX
 #include <windows.h>
-#include <renderdoc_app.h>
+#include <renderdoc/renderdoc_app.h>
 
 struct RenderDoc
 {

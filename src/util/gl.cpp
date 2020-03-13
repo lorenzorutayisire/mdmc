@@ -3,20 +3,6 @@
 #include <fstream>
 #include <vector>
 
-GLuint gen_buffer()
-{
-	GLuint name;
-	glGenBuffers(1, &name);
-	return name;
-}
-
-GLuint gen_texture()
-{
-	GLuint name;
-	glGenTextures(1, &name);
-	return name;
-}
-
 // ================================================================================================
 // Shader
 // ================================================================================================
@@ -116,14 +102,20 @@ std::string Program::get_log()
 	return std::string(log.begin(), log.end());
 }
 
-GLint Program::get_attrib_location(const GLchar* name)
+GLint Program::get_attrib_location(const GLchar* name, GLboolean safe)
 {
-	return glGetAttribLocation(this->id, name);
+	GLint loc = glGetAttribLocation(this->id, name);
+	if (safe && loc < 0)
+		throw std::runtime_error("Attrib location is negative.");
 }
 
-GLint Program::get_uniform_location(const GLchar* name)
+GLint Program::get_uniform_location(const GLchar* name, GLboolean safe)
 {
-	return glGetUniformLocation(this->id, name);
+	GLint loc = glGetUniformLocation(this->id, name);
+	if (safe && loc < 0)
+		throw std::runtime_error("Uniform location is negative.");
+	return loc;
+
 }
 
 // ================================================================================================
@@ -173,21 +165,16 @@ void TextureBuffer::bind(GLuint binding, GLint level, GLboolean layered, GLint l
 	glBindImageTexture(binding, this->texture_name, level, layered, layer, access, format);
 }
 
-TextureBuffer TextureBuffer::create()
-{
-	GLuint buffer_name, texture_name;
-	glGenBuffers(1, &buffer_name);
-	glGenTextures(1, &texture_name);
-
-	return TextureBuffer(buffer_name, texture_name);
-}
-
 // ================================================================================================
 // AtomicCounter
 // ================================================================================================
 
-AtomicCounter::AtomicCounter(GLuint name) :
-	name(name)
+AtomicCounter::AtomicCounter() :
+	name([]() {
+		GLuint name;
+		glGenBuffers(1, &name);
+		return name;
+	}())
 {}
 
 AtomicCounter::~AtomicCounter()
@@ -218,19 +205,16 @@ void AtomicCounter::bind(GLuint binding)
 	glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, binding, this->name);
 }
 
-AtomicCounter AtomicCounter::create()
-{
-	GLuint name;
-	glGenBuffers(1, &name);
-	return AtomicCounter(name);
-}
-
 // ================================================================================================
 // SSBO
 // ================================================================================================
 
-ShaderStorageBuffer::ShaderStorageBuffer(GLuint name) :
-	name(name)
+ShaderStorageBuffer::ShaderStorageBuffer() :
+	name([]() {
+		GLuint name;
+		glGenBuffers(1, &name);
+		return name;
+	}())
 {}
 
 
@@ -252,19 +236,16 @@ void ShaderStorageBuffer::bind(GLuint binding) const
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, binding, this->name);
 }
 
-ShaderStorageBuffer ShaderStorageBuffer::create()
-{
-	GLuint name;
-	glGenBuffers(1, &name);
-	return ShaderStorageBuffer(name);
-}
-
 // ================================================================================================
 // FrameBuffer
 // ================================================================================================
 
-FrameBuffer::FrameBuffer(GLuint name) :
-	name(name)
+FrameBuffer::FrameBuffer() :
+	name([]() {
+		GLuint res;
+		glGenFramebuffers(1, &res);
+		return res;
+	}())
 {}
 
 FrameBuffer::~FrameBuffer()
@@ -292,19 +273,16 @@ void FrameBuffer::unuse()
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-FrameBuffer FrameBuffer::create()
-{
-	GLuint name;
-	glGenFramebuffers(1, &name);
-	return FrameBuffer(name);
-}
-
 // ================================================================================================
 // Texture3d
 // ================================================================================================
 
-Texture3d::Texture3d(GLuint name) :
-	name(name)
+Texture3d::Texture3d() :
+	name([]() {
+		GLuint res;
+		glGenTextures(1, &res);
+		return res;
+	}())
 {}
 
 Texture3d::~Texture3d()
@@ -312,18 +290,21 @@ Texture3d::~Texture3d()
 	glDeleteTextures(1, &this->name);
 }
 
-void Texture3d::set_storage(GLenum format, GLuint width, GLuint height, GLuint depth)
+void Texture3d::bind() const
 {
 	glBindTexture(GL_TEXTURE_3D, this->name);
-	glTexStorage3D(GL_TEXTURE_3D, 1, format, width, height, depth);
+}
 
+void Texture3d::unbind()
+{
 	glBindTexture(GL_TEXTURE_3D, 0);
 }
 
-Texture3d Texture3d::create()
+void Texture3d::set_storage(GLenum format, GLuint width, GLuint height, GLuint depth) const
 {
-	GLuint name;
-	glGenTextures(1, &name);
-	return Texture3d(name);
-}
+	this->bind();
 
+	glTexStorage3D(GL_TEXTURE_3D, 1, format, width, height, depth);
+
+	this->unbind();
+}

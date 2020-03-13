@@ -16,17 +16,17 @@
 
 #include "Minecraft/Assets.hpp"
 
-#include "Chunk.hpp"
-
 #include "routine/phase.hpp"
 
-#include "Voxelizer/aiSceneWrapper.hpp"
-#include "voxelizer.hpp"
+#include "scene/scene.hpp"
+#include "scene/ai_scene_loader.hpp"
+
+#include "routine/scene_phase.hpp"
 
 // imgui
 #include <imgui.h>
-#include <imgui/imgui_impl_glfw.h>
-#include <imgui/imgui_impl_opengl3.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_opengl3.h>
 
 #define MAX_SIZE_PER_CHUNK 1000000
 
@@ -34,25 +34,11 @@
 
 #define DEBUG
 
+
+#define WINDOW_WIDTH  1024
+#define WINDOW_HEIGHT 720
+
 using namespace std;
-
-std::shared_ptr<const mdmc::aiSceneWrapper> load_model(const filesystem::path& path)
-{
-	Assimp::Importer importer;
-	const aiScene* scene = importer.ReadFile(path.u8string().c_str(), aiProcess_Triangulate | aiProcess_FlipUVs);
-
-	if (scene == nullptr)
-		return nullptr;
-
-	return std::make_shared<mdmc::aiSceneWrapper>(scene, path.parent_path());
-}
-
-std::shared_ptr<const mdmc::Minecraft::Assets> load_assets(const filesystem::path& path, const string& version)
-{
-	auto assets = std::make_shared<mdmc::Minecraft::Assets>(path, version);
-	assets->load();
-	return assets;
-}
 
 
 int main(int argc, char** argv)
@@ -67,10 +53,10 @@ int main(int argc, char** argv)
 	}
 
 	// <model_path>
-	filesystem::path model_path = argv[1];
-	if (!std::filesystem::exists(model_path))
+	filesystem::path scene_path = argv[1];
+	if (!std::filesystem::exists(scene_path))
 	{
-		std::cerr << "Can't open file at: " << model_path << std::endl;
+		std::cerr << "Can't open file at: " << scene_path << std::endl;
 		return 2;
 	}
 
@@ -98,7 +84,7 @@ int main(int argc, char** argv)
 
 	std::cout << "Height: " << height << std::endl;
 	std::cout << "Resolution: " << resolution << std::endl;
-	std::cout << "Model path: " << model_path << std::endl;
+	std::cout << "Scene path: " << scene_path << std::endl;
 	std::cout << "Minecraft version: " << argv[4] << std::endl;
 
 	if (glfwInit() != GLFW_TRUE)
@@ -107,7 +93,7 @@ int main(int argc, char** argv)
 		return 7;
 	}
 
-	GLFWwindow* window = glfwCreateWindow(500, 500, "mdmc", NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "mdmc", NULL, NULL);
 	glfwMakeContextCurrent(window);
 
 	glewExperimental = GL_TRUE;
@@ -117,22 +103,27 @@ int main(int argc, char** argv)
 		return 6;
 	}
 
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_TEXTURE_3D);
+	glfwShowWindow(window);
 
+	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 
-	ImGui::StyleColorsLight();
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	//io.Fonts->AddFontFromFileTTF("resources/fonts/Baloo2-Regular.ttf", 24.0f);
 
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init("#version 460");
 
 	Stage stage(window);
 
+	auto phase = std::make_shared<ScenePhase>();
+	stage.set_phase(phase);
+
 	double prior_time = 0;
 
 	while (!glfwWindowShouldClose(window))
 	{
+		// Update
 		glfwPollEvents();
 
 		double time = glfwGetTime();
@@ -146,6 +137,11 @@ int main(int argc, char** argv)
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 
+		int width, height;
+		glfwGetFramebufferSize(window, &width, &height);
+
+		glViewport(0, 0, width, height);
+
 		stage.render();
 
 		ImGui::Render();
@@ -153,6 +149,13 @@ int main(int argc, char** argv)
 
 		glfwSwapBuffers(window);
 	}
+
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
+
+	glfwDestroyWindow(window);
+	glfwTerminate();
 
 	return 0;
 }

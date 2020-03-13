@@ -1,8 +1,8 @@
 #pragma once
 
-#include <GL/glew.h>
-
 #include <string>
+
+#include <GL/glew.h>
 
 // ================================================================================================
 // Shader
@@ -47,8 +47,8 @@ struct Program
 
 	std::string get_log();
 
-	GLint get_attrib_location(const GLchar* name);
-	GLint get_uniform_location(const GLchar* name);
+	GLint get_attrib_location(const GLchar* name, GLboolean safe = true);
+	GLint get_uniform_location(const GLchar* name, GLboolean safe = true);
 };
 
 // ================================================================================================
@@ -68,8 +68,6 @@ struct TextureBuffer
 	void set_format(GLenum format);
 
 	void bind(GLuint binding, GLint level, GLboolean layered, GLint layer, GLenum access, GLenum format);
-
-	static TextureBuffer create();
 };
 
 // ================================================================================================
@@ -80,7 +78,7 @@ struct AtomicCounter
 {
 	const GLuint name;
 
-	AtomicCounter(GLuint name);
+	AtomicCounter();
 	AtomicCounter(const AtomicCounter&) = delete;
 
 	~AtomicCounter();
@@ -89,8 +87,6 @@ struct AtomicCounter
 	void set_value(GLuint value);
 
 	void bind(GLuint binding);
-
-	static AtomicCounter create();
 };
 
 // ================================================================================================
@@ -101,7 +97,7 @@ struct ShaderStorageBuffer
 {
 	const GLuint name;
 
-	ShaderStorageBuffer(GLuint name);
+	ShaderStorageBuffer();
 	ShaderStorageBuffer(const ShaderStorageBuffer&) = delete;
 
 	~ShaderStorageBuffer();
@@ -109,8 +105,6 @@ struct ShaderStorageBuffer
 	void load_data(GLsizei size, const void* data, GLenum usage) const;
 
 	void bind(GLuint binding) const;
-
-	static ShaderStorageBuffer create();
 };
 
 // ================================================================================================
@@ -121,7 +115,7 @@ struct FrameBuffer
 {
 	const GLuint name;
 
-	FrameBuffer(GLuint name);
+	FrameBuffer();
 	~FrameBuffer();
 
 	FrameBuffer(const FrameBuffer&) = delete;
@@ -131,8 +125,6 @@ struct FrameBuffer
 
 	void use();
 	void unuse();
-
-	static FrameBuffer create();
 };
 
 // ================================================================================================
@@ -141,18 +133,16 @@ struct FrameBuffer
 
 struct Texture3d
 {
-private:
-	Texture3d(GLuint name);
-	
-public:
 	const GLuint name;
 
+	Texture3d();
 	~Texture3d();
 
 	Texture3d(const Texture3d&) = delete;
 	Texture3d(const Texture3d&&) = delete;
 
-	void set_storage(GLenum format, GLuint width, GLuint height, GLuint depth);
+	void bind() const;
+	static void unbind();
 
-	static Texture3d create();
+	void set_storage(GLenum format, GLuint width, GLuint height, GLuint depth) const;
 };

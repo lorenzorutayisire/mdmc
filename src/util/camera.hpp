@@ -32,7 +32,7 @@ namespace tdogl {
 	 Includes the perspective projection matrix.
 	 */
 	class Camera {
-	public:
+	public: 
 		Camera();
 
 		/**
@@ -154,6 +154,10 @@ namespace tdogl {
 		float _viewportAspectRatio;
 
 		void normalizeAngles();
+
+	public:
+		float horizontal_angle() const  { return this->_horizontalAngle; };
+		float vertical_angle() const { return this->_verticalAngle; };
 	};
 
 }
