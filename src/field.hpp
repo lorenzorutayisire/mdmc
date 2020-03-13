@@ -11,17 +11,11 @@ struct Field
 	// The min/max points of the field.
 	glm::vec3 min, max;
 
-	// The size of the field, obtained using max - min.
-	const glm::vec3 size;
+	glm::vec3 size() const;
+	float largest_side() const;
 
-	// The largest side of the field.
-	const float largest_side;
-
-	// Gets the matrix that if applied to the filed will bring it to the origin (0, 0, 0).
-	glm::mat4 get_pivot() const;
-
-	// Gets the matrix used to project the field on the X, Y and Z axes.
-	glm::mat4 get_x_ortho() const, get_y_ortho() const, get_z_ortho() const;
+	glm::mat4 normalize_transf() const;
+	void ortho_proj(glm::mat4& x, glm::mat4& y, glm::mat4& z) const;
 
 	Field(glm::vec3 min, glm::vec3 max);
 

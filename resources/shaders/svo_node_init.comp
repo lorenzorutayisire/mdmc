@@ -1,0 +1,17 @@
+#version 430
+
+layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+
+uniform uint u_start;
+uniform uint u_count;
+
+layout(binding = 1, r32ui) uniform uimageBuffer u_octree;
+
+void main()
+{
+	uint node_offset = gl_GlobalInvocationID.x;
+	if (node_offset >= u_count * 8)
+		return;
+
+	imageStore(u_octree, int(u_start + node_offset), uvec4(0));
+}

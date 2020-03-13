@@ -1,0 +1,76 @@
+#version 430
+
+layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+
+// ======================================================================
+// Octree
+// ======================================================================
+
+layout(binding = 1, r32ui) uniform uimageBuffer u_octree;
+uniform uint u_octree_max_level;
+
+uint node_offset(uvec3 position, uint level)
+{
+	uint result = 0u;
+
+	uint shift = u_octree_max_level - level;
+
+	// Masks out the bits that are outside Octree representation.
+	position &= pow(2, u_octree_max_level) - 1;
+
+	result |= ((position.x >> shift) & 1u) << 2;
+	result |= ((position.y >> shift) & 1u) << 1;
+	result |= ((position.z >> shift) & 1u);
+
+	return result;
+}
+
+int tree_lookup(uvec3 position, uint level)
+{
+	uint address = 0;
+
+	for (uint current_level = 0u; current_level < level; current_level++)
+	{
+		uint offset = node_offset(position, current_level);
+		address = imageLoad(u_octree, int(address + offset)).r;
+
+		if ((address & 0x80000000) == 0)
+			return -1; // The given position doesn't refer to an allocated node.
+
+		address &= 0x7FFFFFFF;
+	}
+	
+	return int(address);
+}
+
+uint vec4_to_ui32(vec4 value)
+{
+	uvec4 tmp = floatBitsToUint(value);
+	return tmp.r << 8 * 3 | tmp.g << 8 * 2 | tmp.b << 8 | tmp.a;
+}
+
+// ======================================================================
+// Main
+// ======================================================================
+
+layout(binding = 2, rgb10_a2ui) uniform uimageBuffer u_voxel_position;
+layout(binding = 3, rgba8) uniform imageBuffer u_voxel_color;
+
+void main()
+{
+	uint voxel_id = gl_GlobalInvocationID.x;
+
+	if (voxel_id >= imageSize(u_voxel_position))
+		return;
+
+	uvec4 position = imageLoad(u_voxel_position, int(voxel_id));
+
+	int address = tree_lookup(position.xyz, u_octree_max_level);
+	if (address < 0)
+		return; // The voxel's node isn't allocated, count the error.
+
+	vec4 color = imageLoad(u_voxel_color, int(voxel_id));
+	imageStore(u_octree, address, uvec4(vec4_to_ui32(color)));
+}
+
+

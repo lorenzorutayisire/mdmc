@@ -1,0 +1,53 @@
+#version 430
+
+#extension GL_NV_gpu_shader5 : enable
+
+layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+
+// ======================================================================
+// Octree
+// ======================================================================
+
+layout(binding = 1, r32ui) uniform uimageBuffer u_octree;
+uniform uint u_octree_max_level;
+
+uint node_offset(uvec3 position, uint level)
+{
+	uint result = 0u;
+
+	uint shift = u_octree_max_level - level;
+
+	// Masks out the bits that are outside Octree representation.
+	position &= pow(2, u_octree_max_level) - 1;
+
+	result |= ((position.x >> shift) & 1u) << 2;
+	result |= ((position.y >> shift) & 1u) << 1;
+	result |= ((position.z >> shift) & 1u);
+
+	return result;
+}
+
+// ======================================================================
+// Main
+// ======================================================================
+
+layout(binding = 2, rgb10_a2ui) uniform uimageBuffer u_voxel_position;
+layout(binding = 3, rgba8) uniform imageBuffer u_voxel_color;
+
+uniform uint u_level;
+
+void main()
+{
+	uint id = gl_GlobalInvocationID.x * gl_WorkGroupSize.x + gl_LocalInvocationID.x;
+
+	uvec4 position = imageLoad(u_voxel_position, int(id));
+	uint address = 0;
+
+	for (uint current_level = 0; current_level < u_level; current_level++)
+	{
+		uint octet_offset = node_offset(position.xyz, current_level);
+		address = imageLoad(u_octree, int(address + octet_offset)).r & 0x80000000;
+	}
+	
+	imageStore(u_octree, int(address), uvec4(0x80000000));
+}
