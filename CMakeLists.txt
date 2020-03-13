@@ -1,29 +1,62 @@
 ﻿cmake_minimum_required (VERSION 3.8)
 
-project("mdmc")
+project("mdmc" LANGUAGES C CXX)
 
-set (CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 17)
 
-# Loads the conan file and includes/links needed libraries.
+# conan
 include("conanbuildinfo.cmake")
 conan_basic_setup()
 
-include_directories("src" ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
-include_directories("lib")
+# ================================================================
+# /resources
+# ================================================================
 
-# Puts all resources inside /bin/resources folder.
 file(GLOB RESOURCES "resources/*")
 file(COPY ${RESOURCES} DESTINATION "${CMAKE_BINARY_DIR}/bin/resources")
 
-file(GLOB_RECURSE
-	SRC
-	"src/*.hpp" "src/*.cpp"
-	"lib/*.hpp" "lib/*.cpp"	
-)
+# ================================================================
+# /src
+# ================================================================
 
-list(JOIN SRC "\n" SRC_DEBUG)
-message(${SRC_DEBUG})
+set(BIN ${CMAKE_PROJECT_NAME})
 
-add_executable (mdmc ${SRC})
+file(GLOB_RECURSE SRC LIST_DIRECTORIES false "src/*.h" "src/*.hpp" "src/*.cpp" "src/*.cuh" "src/*.cu")
 
-target_link_libraries(mdmc ${CONAN_LIBS})
+include_directories("src")
+
+add_executable(${BIN} ${SRC})
+
+# ================================================================
+# /dep
+# ================================================================
+
+# cuda
+include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
+
+message(${CONAN_LIBS})
+
+target_link_libraries(${BIN} ${CONAN_LIBS})
+
+# libnbt++
+set(NBT_BUILD_TESTS OFF)
+add_subdirectory("dep/libnbtplusplus")
+
+include_directories("dep/libnbtplusplus/include")
+target_link_libraries(${BIN} nbt++)
+
+# imgui_impl
+add_subdirectory("dep/imgui_impl")
+include_directories("dep/imgui_impl")
+target_link_libraries(${BIN} imgui_impl)
+
+# cub
+include_directories("dep/cub")
+
+# renderdoc
+include_directories("dep/renderdoc")
+
+# tinyfiledialogs
+include_directories("dep/tinyfiledialogs")
+add_library(tinyfiledialogs "dep/tinyfiledialogs/tinyfiledialogs.c" "dep/tinyfiledialogs/tinyfiledialogs.h")
+target_link_libraries(${BIN} tinyfiledialogs)

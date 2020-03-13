@@ -5,9 +5,9 @@ zlib/1.2.11@conan/stable
 Assimp/4.1.0@jacmoe/stable
 glew/2.1.0@bincrafters/stable
 glfw/3.3@bincrafters/stable
-libnbtplusplus/1.0@loryruta/stable
 imgui/1.73@bincrafters/stable
 rapidjson/1.1.0@bincrafters/stable
+gtest/1.8.1@bincrafters/stable
 
 [generators]
 cmake

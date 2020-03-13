@@ -1,0 +1,6 @@
+[submodule "dep/libnbtplusplus"]
+	path = dep/libnbtplusplus
+	url = https://github.com/ljfa-ag/libnbtplusplus
+[submodule "dep/tinyfiledialogs"]
+	path = dep/tinyfiledialogs
+	url = https://github.com/native-toolkit/tinyfiledialogs

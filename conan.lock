@@ -1,0 +1,68 @@
+{
+ "profile_host": "[settings]\narch=x86_64\narch_build=x86_64\nbuild_type=Debug\ncompiler=Visual Studio\ncompiler.runtime=MDd\ncompiler.version=16\nos=Windows\nos_build=Windows\n[options]\n[build_requires]\n[env]\n",
+ "graph_lock": {
+  "nodes": {
+   "6b99f1dc-5caa-11ea-b156-c860006c8570": {
+    "pref": "gtest/1.8.1@bincrafters/stable#0:875c67f4d8a79bdd002908b75efce119eb82836d#b13394f9b671ba1f04e8d86a5d43c5a6",
+    "options": "build_gmock=True\ndebug_postfix=d\nno_main=False\nshared=False"
+   },
+   "6b99f1dd-5caa-11ea-b8d2-c860006c8570": {
+    "pref": "rapidjson/1.1.0@bincrafters/stable#0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#0",
+    "options": ""
+   },
+   "6b99f1de-5caa-11ea-aca3-c860006c8570": {
+    "pref": "stb/20190512@conan/stable#0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#0",
+    "options": ""
+   },
+   "6b99f1df-5caa-11ea-a963-c860006c8570": {
+    "pref": "imgui/1.73@bincrafters/stable#0:d057732059ea44a47760900cb5e4855d2bea8714#0",
+    "options": "shared=False"
+   },
+   "6b99f1e0-5caa-11ea-89d1-c860006c8570": {
+    "pref": "glm/0.9.9.4@g-truc/stable#0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#0",
+    "options": ""
+   },
+   "6b99f1e1-5caa-11ea-ad73-c860006c8570": {
+    "pref": "glew/2.1.0@bincrafters/stable#0:d057732059ea44a47760900cb5e4855d2bea8714#9b8a8d0e49a1497efe899aa7ae70e3e7",
+    "options": "shared=False"
+   },
+   "6b99f1e2-5caa-11ea-a621-c860006c8570": {
+    "pref": "glfw/3.3@bincrafters/stable#0:d057732059ea44a47760900cb5e4855d2bea8714#0",
+    "options": "shared=False"
+   },
+   "6b99f1e3-5caa-11ea-a823-c860006c8570": {
+    "pref": "zlib/1.2.11@conan/stable#0:d057732059ea44a47760900cb5e4855d2bea8714#0",
+    "options": "minizip=False\nshared=False"
+   },
+   "6b99f1e4-5caa-11ea-9330-c860006c8570": {
+    "pref": "IrrXML/1.2@conan/stable#0:d057732059ea44a47760900cb5e4855d2bea8714#0a025c359ee499470d6fff4dffff26bb",
+    "options": "shared=False"
+   },
+   "6b99f1e6-5caa-11ea-a631-c860006c8570": {
+    "pref": null,
+    "options": "Assimp:double_precision=False\nAssimp:internal_irrxml=False\nAssimp:no_export=False\nAssimp:shared=False\nAssimp:with_3d=True\nAssimp:with_3ds=True\nAssimp:with_3mf=True\nAssimp:with_ac=True\nAssimp:with_amf=True\nAssimp:with_ase=True\nAssimp:with_assbin=True\nAssimp:with_assxml=True\nAssimp:with_b3d=True\nAssimp:with_blend=True\nAssimp:with_bvh=True\nAssimp:with_cob=True\nAssimp:with_collada=True\nAssimp:with_csm=True\nAssimp:with_dxf=True\nAssimp:with_fbx=True\nAssimp:with_gltf=True\nAssimp:with_hmp=True\nAssimp:with_ifc=True\nAssimp:with_irr=True\nAssimp:with_irrmesh=True\nAssimp:with_lwo=True\nAssimp:with_lws=True\nAssimp:with_md2=True\nAssimp:with_md3=True\nAssimp:with_md5=True\nAssimp:with_mdc=True\nAssimp:with_mdl=True\nAssimp:with_mmd=True\nAssimp:with_ms3d=True\nAssimp:with_ndo=True\nAssimp:with_nff=True\nAssimp:with_obj=True\nAssimp:with_off=True\nAssimp:with_ogre=True\nAssimp:with_opengex=True\nAssimp:with_ply=True\nAssimp:with_q3bsp=True\nAssimp:with_q3d=True\nAssimp:with_raw=True\nAssimp:with_sib=True\nAssimp:with_smd=True\nAssimp:with_stl=True\nAssimp:with_terragen=True\nAssimp:with_x=True\nAssimp:with_x3d=True\nAssimp:with_xgl=True\nIrrXML:shared=False\nglew:shared=False\nglfw:shared=False\ngtest:build_gmock=True\ngtest:debug_postfix=d\ngtest:no_main=False\ngtest:shared=False\nimgui:shared=False\nzlib:minizip=False\nzlib:shared=False",
+    "requires": {
+     "stb/20190512@conan/stable#0": "6b99f1de-5caa-11ea-aca3-c860006c8570",
+     "glm/0.9.9.4@g-truc/stable#0": "6b99f1e0-5caa-11ea-89d1-c860006c8570",
+     "zlib/1.2.11@conan/stable#0": "6b99f1e3-5caa-11ea-a823-c860006c8570",
+     "Assimp/4.1.0@jacmoe/stable#0": "6b99f1e5-5caa-11ea-b6cb-c860006c8570",
+     "glew/2.1.0@bincrafters/stable#0": "6b99f1e1-5caa-11ea-ad73-c860006c8570",
+     "glfw/3.3@bincrafters/stable#0": "6b99f1e2-5caa-11ea-a621-c860006c8570",
+     "imgui/1.73@bincrafters/stable#0": "6b99f1df-5caa-11ea-a963-c860006c8570",
+     "rapidjson/1.1.0@bincrafters/stable#0": "6b99f1dd-5caa-11ea-b8d2-c860006c8570",
+     "gtest/1.8.1@bincrafters/stable#0": "6b99f1dc-5caa-11ea-b156-c860006c8570"
+    },
+    "path": "C:\\Users\\rutayisire\\source\\repos\\mdmc\\conanfile.txt"
+   },
+   "6b99f1e5-5caa-11ea-b6cb-c860006c8570": {
+    "pref": "Assimp/4.1.0@jacmoe/stable#0:71a43c4f2d5aef6feaa872a7360d40d786e22276#992e6a4ad6b845d2a3f6e55978a3654f",
+    "options": "double_precision=False\ninternal_irrxml=False\nno_export=False\nshared=False\nwith_3d=True\nwith_3ds=True\nwith_3mf=True\nwith_ac=True\nwith_amf=True\nwith_ase=True\nwith_assbin=True\nwith_assxml=True\nwith_b3d=True\nwith_blend=True\nwith_bvh=True\nwith_cob=True\nwith_collada=True\nwith_csm=True\nwith_dxf=True\nwith_fbx=True\nwith_gltf=True\nwith_hmp=True\nwith_ifc=True\nwith_irr=True\nwith_irrmesh=True\nwith_lwo=True\nwith_lws=True\nwith_md2=True\nwith_md3=True\nwith_md5=True\nwith_mdc=True\nwith_mdl=True\nwith_mmd=True\nwith_ms3d=True\nwith_ndo=True\nwith_nff=True\nwith_obj=True\nwith_off=True\nwith_ogre=True\nwith_opengex=True\nwith_ply=True\nwith_q3bsp=True\nwith_q3d=True\nwith_raw=True\nwith_sib=True\nwith_smd=True\nwith_stl=True\nwith_terragen=True\nwith_x=True\nwith_x3d=True\nwith_xgl=True\nIrrXML:shared=False\nzlib:minizip=False\nzlib:shared=False",
+    "requires": {
+     "zlib/1.2.11@conan/stable#0": "6b99f1e3-5caa-11ea-a823-c860006c8570",
+     "IrrXML/1.2@conan/stable#0": "6b99f1e4-5caa-11ea-9330-c860006c8570"
+    }
+   }
+  }
+ },
+ "version": "0.1"
+}
