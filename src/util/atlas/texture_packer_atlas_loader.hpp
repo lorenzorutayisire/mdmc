@@ -12,5 +12,5 @@
 class TexturePackerAtlasLoader
 {
 public:
-	static std::shared_ptr<const Atlas> load(const std::filesystem::path& texture_path, const std::filesystem::path& json_path);
+	static std::shared_ptr<Atlas const> load(std::filesystem::path const& image_path, std::filesystem::path const& descriptor_path);
 };

@@ -14,8 +14,6 @@
 #include <windows.h>
 #include "renderdoc_app.h"
 
-#include "Minecraft/Assets.hpp"
-
 #include "routine/phase.hpp"
 
 #include "scene/scene.hpp"

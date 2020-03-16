@@ -1,43 +1,41 @@
 #include "minecraft_world_renderer.hpp"
 
-MinecraftWorldRenderer::MinecraftWorldRenderer(const std::shared_ptr<MinecraftVersionPool>& version_pool) :
-	version_pool(version_pool),
-	vbo([]() {
-		GLuint name;
-		glGenBuffers(1, &name);
-		return name;
-	}())
-{}
+#include <iostream>
 
-MinecraftWorldRenderer::~MinecraftWorldRenderer()
+#include <glm/gtc/type_ptr.hpp>
+
+MinecraftWorldRenderer::MinecraftWorldRenderer()
 {
-	glDeleteBuffers(1, &this->vbo);
+	Shader vert(GL_VERTEX_SHADER);
+	vert.source_from_file("resources/shaders/minecraft_world.vert");
+	if (!vert.compile())
+		throw;
+
+	this->program.attach_shader(vert);
+
+	Shader frag(GL_FRAGMENT_SHADER);
+	frag.source_from_file("resources/shaders/minecraft_world.frag");
+	if (!frag.compile())
+		throw;
+
+	this->program.attach_shader(frag);
+
+	if (!this->program.link())
+	{
+		std::cerr << this->program.get_log() << std::endl;
+		throw;
+	}
 }
 
-const MinecraftBlockStateVariant* MinecraftWorldRenderer::get_block(const glm::uvec3& position) const
+void MinecraftWorldRenderer::render(const glm::mat4& camera, const glm::mat4& transform, const std::shared_ptr<MinecraftWorld>& world, const glm::vec4& tint_color)
 {
-	if (this->blocks_by_position.find(position) != this->blocks_by_position.end())
-		return this->blocks_by_position.at(position);
-	
-	auto air_block = this->version_pool->get_block_state_variant(0);
-	return &air_block.second;
-}
+	this->program.use();
 
-void MinecraftWorldRenderer::set_block(const glm::uvec3& position, const MinecraftBlockStateVariant& block_state_variant, bool must_build)
-{
-	//this->blocks_by_position.insert(std::make_pair(position, &block_state_variant));
-	if (must_build)
-		this->build();
-}
+	glUniformMatrix4fv(this->program.get_uniform_location("u_camera"), 1, GL_FALSE, glm::value_ptr(camera));
+	glUniformMatrix4fv(this->program.get_uniform_location("u_transform"), 1, GL_FALSE, glm::value_ptr(transform));
+	glUniform4fv(this->program.get_uniform_location("u_tint_color"), 1, glm::value_ptr(tint_color));
 
-void MinecraftWorldRenderer::build()
-{
-	const size_t vertex_size = 3 * sizeof(GLfloat) + 1 * sizeof(GLbyte);
+	world->render();
 
-	// Count
-	size_t elements_count = 0;
-	for (auto& member : this->blocks_by_position)
-		elements_count += member.second->get_model(this->version_pool).elements.size();
-
-	size_t size = elements_count * 6 * 4 * vertex_size;
+	this->program.unuse();
 }

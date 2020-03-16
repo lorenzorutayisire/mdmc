@@ -11,7 +11,7 @@
 #include <tinyfiledialogs.h>
 
 #include "scene/ai_scene_loader.hpp"
-#include "minecraft_blocks_phase.hpp"
+#include "minecraft_assets_phase.hpp"
 
 void ScenePhase::update(Stage& stage, float delta)
 {
@@ -90,7 +90,7 @@ bool ScenePhase::ui_next_button(Stage& stage)
 	auto button_size = ImVec2(window_size.x, window_size.y * 0.75f);
 	if (ImGui::Button("Next", button_size))
 	{
-		auto next_phase = std::make_shared<MinecraftBlocksPhase>();
+		auto next_phase = std::make_shared<MinecraftAssetsPhase>();
 		stage.set_phase(next_phase);
 	}
 

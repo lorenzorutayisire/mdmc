@@ -60,3 +60,6 @@ include_directories("dep/renderdoc")
 include_directories("dep/tinyfiledialogs")
 add_library(tinyfiledialogs "dep/tinyfiledialogs/tinyfiledialogs.c" "dep/tinyfiledialogs/tinyfiledialogs.h")
 target_link_libraries(${BIN} tinyfiledialogs)
+
+# ThreadPool
+include_directories("dep/ThreadPool")

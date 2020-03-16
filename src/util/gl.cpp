@@ -106,14 +106,14 @@ GLint Program::get_attrib_location(const GLchar* name, GLboolean safe)
 {
 	GLint loc = glGetAttribLocation(this->id, name);
 	if (safe && loc < 0)
-		throw std::runtime_error("Attrib location is negative.");
+		throw std::invalid_argument("Attrib location is negative.");
 }
 
 GLint Program::get_uniform_location(const GLchar* name, GLboolean safe)
 {
 	GLint loc = glGetUniformLocation(this->id, name);
 	if (safe && loc < 0)
-		throw std::runtime_error("Uniform location is negative.");
+		throw std::invalid_argument("Uniform location is negative.");
 	return loc;
 
 }

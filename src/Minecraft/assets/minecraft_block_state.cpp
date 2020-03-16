@@ -1,5 +1,7 @@
 #include "minecraft_block_state.hpp"
 
+#include "minecraft_assets.hpp"
+
 // ================================================================================================
 // MinecraftBlockStateVariant
 // ================================================================================================
@@ -12,9 +14,9 @@ void MinecraftBlockStateVariant::from_json(const rapidjson::Value::Object& json)
 	//this->uvlock = json["uvlock"].GetBool();
 }
 
-const MinecraftModel& MinecraftBlockStateVariant::get_model(const std::shared_ptr<const MinecraftVersionPool>& pool) const
+const MinecraftModel& MinecraftBlockStateVariant::get_model(const std::shared_ptr<const MinecraftAssets>& assets) const
 {
-	return pool->get_model(this->model);
+	return assets->model_by_name.at(this->model);
 }
 
 // ================================================================================================
@@ -33,4 +35,10 @@ void MinecraftBlockState::from_json(const rapidjson::Value::Object& json)
 		}
 	}
 	// multiparts
+}
+
+size_t MinecraftBlockStateVariant::bake(std::vector<float>& buffer, const std::shared_ptr<const MinecraftAssets>& assets, glm::mat4 transform) const
+{
+	// TODO: rotation
+	return this->get_model(assets).bake(buffer, assets, transform);
 }

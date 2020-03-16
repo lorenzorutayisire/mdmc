@@ -2,25 +2,19 @@
 
 #include <string>
 #include <unordered_map>
+#include <filesystem>
 
-#include <GL/glew.h>
+#include <glm/glm.hpp>
 
 struct Atlas
 {
 	struct Texture
 	{
-		unsigned int x, y;
-		unsigned int width, height;
+		glm::vec2 from;
+		glm::vec2 size;
 	};
 
-	GLuint name;
-	unsigned int width, height;
-
-	std::unordered_map<std::string, Texture> texture_by_name;
-
-	Atlas();
-	Atlas(const Atlas&) = delete;
-	Atlas(const Atlas&&) = delete;
-
-	~Atlas();
+	std::filesystem::path image_path;
+	glm::vec2 size;
+	std::unordered_map<std::string, Texture const> texture_by_name;
 };

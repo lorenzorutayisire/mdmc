@@ -7,7 +7,9 @@
 
 #include <rapidjson/document.h>
 
-#include "minecraft_version_pool.hpp"
+#include "minecraft_model.hpp"
+
+class MinecraftAssets;
 
 // ================================================================================================
 // MinecraftBlockStateVariant
@@ -21,7 +23,9 @@ struct MinecraftBlockStateVariant
 
 	void from_json(const rapidjson::Value::Object& json);
 
-	const MinecraftModel& get_model(const std::shared_ptr<const MinecraftVersionPool>& pool) const;
+	const MinecraftModel& get_model(const std::shared_ptr<const MinecraftAssets>& assets) const;
+
+	size_t bake(std::vector<float>& buffer, const std::shared_ptr<const MinecraftAssets>& assets, glm::mat4 transform) const;
 };
 
 // ================================================================================================

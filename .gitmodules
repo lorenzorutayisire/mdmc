@@ -4,3 +4,6 @@
 [submodule "dep/tinyfiledialogs"]
 	path = dep/tinyfiledialogs
 	url = https://github.com/native-toolkit/tinyfiledialogs
+[submodule "dep/ThreadPool"]
+	path = dep/ThreadPool
+	url = https://github.com/progschj/ThreadPool
