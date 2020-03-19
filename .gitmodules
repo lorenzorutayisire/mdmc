@@ -7,3 +7,6 @@
 [submodule "dep/ThreadPool"]
 	path = dep/ThreadPool
 	url = https://github.com/progschj/ThreadPool
+[submodule "dep/hat-trie"]
+	path = dep/hat-trie
+	url = https://github.com/Tessil/hat-trie

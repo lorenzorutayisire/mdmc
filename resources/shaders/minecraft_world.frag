@@ -10,5 +10,6 @@ out vec4 f_color;
 
 void main()
 {
-	f_color = (v_tint_index == 1.0 ? u_tint_color : vec4(1)) * texture(u_texture2d, v_uv);
+	vec2 uv = v_uv / vec2(textureSize(u_texture2d, 0));
+	f_color = (v_tint_index == 1.0 ? u_tint_color : vec4(1)) * texture(u_texture2d, uv);
 }

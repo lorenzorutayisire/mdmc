@@ -1,17 +1,19 @@
 #include "minecraft_model.hpp"
 
 #include <stdexcept>
+#include <string>
+
 #include <glm/gtx/transform.hpp>
 
 #include "minecraft_assets.hpp"
 
-void ivec3_from_json(glm::ivec3 ivec3, const rapidjson::Value::Array& json)
+void ivec3_from_json(glm::ivec3& ivec3, const rapidjson::Value::Array& json)
 {
 	for (size_t i = 0; i < 3; i++)
 		ivec3[i] = json[i].GetInt();
 }
 
-void vec3_from_json(glm::vec3 vec3, const rapidjson::Value::Array& json)
+void vec3_from_json(glm::vec3& vec3, const rapidjson::Value::Array& json)
 {
 	for (size_t i = 0; i < 3; i++)
 		vec3[i] = json[i].GetFloat();
@@ -21,11 +23,10 @@ void vec3_from_json(glm::vec3 vec3, const rapidjson::Value::Array& json)
 // MinecraftModelElementFace
 // ================================================================================================
 
-MinecraftModelElementFace::MinecraftModelElementFace(const MinecraftModelElement* element) :
-	element(element)
-{}
-
-void MinecraftModelElementFace::from_json(const rapidjson::Value::Object& json)
+void MinecraftModelElementFace::from_json(
+	MinecraftModelElement const* element,
+	rapidjson::Value::Object const& json
+)
 {
 	if (json.HasMember("uv"))
 	{
@@ -36,9 +37,8 @@ void MinecraftModelElementFace::from_json(const rapidjson::Value::Object& json)
 	}
 	else
 	{
-		// TODO: equal to the element face position.
-		this->from_uv = glm::vec2(0);
-		this->to_uv = glm::vec2(0);
+		this->from_uv = element->from;
+		this->to_uv = element->to;
 	}
 
 	this->texture = json["texture"].GetString();
@@ -49,28 +49,30 @@ void MinecraftModelElementFace::from_json(const rapidjson::Value::Object& json)
 	this->tint_index = json.HasMember("tintindex");
 }
 
-const Atlas::Texture& MinecraftModelElementFace::get_texture(const std::shared_ptr<const MinecraftAssets>& assets) const
+const Atlas::Texture& MinecraftModelElementFace::get_texture(
+	std::shared_ptr<MinecraftAssets const> const& assets,
+	std::unordered_map<std::string, std::string> const& texture_by_variable
+) const
 {
-	std::string variable = this->texture;
-	const MinecraftModel* model = this->element->model;
-	while (true)
+	auto atlas = assets->atlas;
+	std::string texture = this->texture;
+	while (texture[0] == '#')
 	{
-		if (assets->atlas->texture_by_name.find(variable) != assets->atlas->texture_by_name.end())
-			return assets->atlas->texture_by_name.at(variable);
-
-		if (model == nullptr) // There's no more parent to step in.
-			throw std::runtime_error(
-				std::string("Unresolved texture name: ") + variable
-			);
-
-		if (model->texture_variable_replacement.find(variable) != model->texture_variable_replacement.end())
-			variable = model->texture_variable_replacement.at(variable);
-
-		model = model->parent_model.empty() ? &model->get_parent_model(assets) : nullptr;
+		auto variable = texture.substr(1);
+		if (texture_by_variable.find(variable) != texture_by_variable.end())
+			texture = texture_by_variable.at(variable);
+		else
+			throw std::runtime_error(std::string("Unresolved texture variable: ") + texture);
 	}
+	return atlas->texture_by_name.at(texture);
 }
 
-size_t MinecraftModelElementFace::bake(std::vector<float>& buffer, const std::shared_ptr<const MinecraftAssets>& assets, glm::mat4 transform) const
+size_t MinecraftModelElementFace::bake(
+	std::shared_ptr<MinecraftAssets const> const& assets,
+	std::unordered_map<std::string, std::string> const& texture_by_variable,
+	glm::mat4 transform,
+	std::vector<float>& buffer
+) const
 {
 	int axis = static_cast<int>(this->orientation) >> 1;
 	int right = static_cast<int>(this->orientation) & 1;
@@ -96,12 +98,12 @@ size_t MinecraftModelElementFace::bake(std::vector<float>& buffer, const std::sh
 		buffer.push_back(position.z);
 
 		// UV
-		auto texture = this->get_texture(assets);
-		auto texture_from = (texture.from + this->from_uv) / assets->atlas->size;
-		auto texture_to = (texture.from + this->to_uv) / assets->atlas->size;
+		auto texture = this->get_texture(assets, texture_by_variable);
+		auto texture_from = texture.from + this->from_uv;
+		auto texture_size = this->to_uv - this->from_uv;
 
-		buffer.push_back(texture_from.x + lb * texture_to.x);
-		buffer.push_back(texture_from.y + mb * texture_to.y);
+		buffer.push_back(texture_from.x + lb * texture_size.x);
+		buffer.push_back(texture_from.y + mb * texture_size.y);
 
 		// Tint index
 		buffer.push_back(this->tint_index);
@@ -125,10 +127,6 @@ const std::unordered_map<std::string, Orientation> orientation_by_name{
 	{"east", Orientation::EAST}
 };
 
-MinecraftModelElement::MinecraftModelElement(const MinecraftModel* model) :
-	model(model)
-{}
-
 void MinecraftModelElement::from_json(const rapidjson::Value::Object& json)
 {
 	auto from = json["from"].GetArray();
@@ -149,24 +147,27 @@ void MinecraftModelElement::from_json(const rapidjson::Value::Object& json)
 
 	for (auto& member : json["faces"].GetObject())
 	{
-		MinecraftModelElementFace face(this);
+		MinecraftModelElementFace face;
 		face.orientation = orientation_by_name.at(member.name.GetString());
-		face.from_json(member.value.GetObject());
+		face.from_json(this, member.value.GetObject());
 		faces_by_position.insert(std::make_pair(face.orientation, face));
 	}
 }
 
-size_t MinecraftModelElement::bake(std::vector<float>& buffer, const std::shared_ptr<const MinecraftAssets>& assets, glm::mat4 transform) const
+size_t MinecraftModelElement::bake(
+	std::shared_ptr<MinecraftAssets const> const& assets,
+	std::unordered_map<std::string, std::string> const& texture_by_variable,
+	glm::mat4 transform,
+	std::vector<float>& buffer
+) const
 {
+	transform = glm::translate(transform, glm::vec3(this->from));
+	// TOOD: rotation
+	transform = glm::scale(transform, glm::vec3(this->to - this->from));
+
 	size_t vertices_count = 0;
 	for (auto& face : this->faces_by_position)
-	{
-		transform = glm::translate(transform, glm::vec3(this->from));
-		transform = glm::scale(transform, glm::vec3(this->to - this->from));
-		// TOOD: rotation
-
-		vertices_count += face.second.bake(buffer, assets, transform);
-	}
+		vertices_count += face.second.bake(assets, texture_by_variable, transform, buffer);
 	return vertices_count;
 }
 
@@ -182,14 +183,14 @@ void MinecraftModel::from_json(const rapidjson::Value::Object& json)
 	if (json.HasMember("textures"))
 	{
 		for (const auto& member : json["textures"].GetObject())
-			this->texture_variable_replacement.insert(std::make_pair(member.name.GetString(), member.value.GetString()));
+			this->texture_by_variable.insert(std::make_pair(member.name.GetString(), member.value.GetString()));
 	}
 
 	if (json.HasMember("elements"))
 	{
 		for (auto& object : json["elements"].GetArray())
 		{
-			MinecraftModelElement element(this);
+			MinecraftModelElement element;
 			element.from_json(object.GetObject());
 			this->elements.push_back(element);
 		}
@@ -201,15 +202,28 @@ MinecraftModel const& MinecraftModel::get_parent_model(std::shared_ptr<Minecraft
 	return assets->model_by_name.at(this->parent_model);
 }
 
-size_t MinecraftModel::bake(std::vector<float>& buffer, const std::shared_ptr<const MinecraftAssets>& pool, glm::mat4 transform) const
+size_t MinecraftModel::bake(
+	std::shared_ptr<MinecraftAssets const> const& assets,
+	glm::mat4 transform,
+	std::vector<float>& buffer
+) const
 {
 	size_t vertices_count = 0;
 
-	if (!this->parent_model.empty())
-		vertices_count += this->get_parent_model(pool).bake(buffer, pool, transform);
+	MinecraftModel const* model = this;
+	std::unordered_map<std::string, std::string> texture_by_variable;
 
-	for (auto& element : this->elements)
-		vertices_count += element.bake(buffer, pool, transform);
+	while (model)
+	{
+		texture_by_variable.insert(model->texture_by_variable.begin(), model->texture_by_variable.end());
+		if (model->elements.size() > 0)
+		{
+			for (auto& element : model->elements)
+				vertices_count += element.bake(assets, texture_by_variable, transform, buffer);
+			return vertices_count;
+		}
+		model = !model->parent_model.empty() ? &model->get_parent_model(assets) : nullptr;
+	}
 
-	return vertices_count;
+	return 0;
 }

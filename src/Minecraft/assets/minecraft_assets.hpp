@@ -20,6 +20,8 @@ public:
 	std::unordered_map<std::string, MinecraftModel> model_by_name;
 	std::unordered_map<std::string, MinecraftBlockState> block_state_by_name;
 
+	std::unordered_map<std::string, std::pair<std::string, MinecraftBlockStateVariant*>> block_state_variant_by_name;
+	std::vector<std::pair<std::string, MinecraftBlockStateVariant*>*> block_state_variant_by_id;
 
 	MinecraftAssets(std::string const& name);
 

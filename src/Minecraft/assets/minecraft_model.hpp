@@ -21,8 +21,6 @@ struct MinecraftModel;
 
 struct MinecraftModelElementFace
 {
-	const MinecraftModelElement* element;
-
 	enum class Orientation { WEST, EAST, DOWN, UP, SOUTH, NORTH };
 	Orientation orientation;
 
@@ -32,13 +30,19 @@ struct MinecraftModelElementFace
 	unsigned int rotation;
 	bool tint_index;
 
-	MinecraftModelElementFace(const MinecraftModelElement* element);
+	void from_json(
+		MinecraftModelElement const* element,
+		const rapidjson::Value::Object& json
+	);
 
-	void from_json(const rapidjson::Value::Object& json);
+	const Atlas::Texture& get_texture(std::shared_ptr<MinecraftAssets const> const& assets, std::unordered_map<std::string, std::string> const& texture_by_variable) const;
 
-	const Atlas::Texture& get_texture(const std::shared_ptr<const MinecraftAssets>& assets) const;
-
-	size_t bake(std::vector<float>& buffer, const std::shared_ptr<const MinecraftAssets>& assets, glm::mat4 transform) const;
+	size_t bake(
+		std::shared_ptr<MinecraftAssets const> const& assets,
+		std::unordered_map<std::string, std::string> const& texture_by_variable,
+		glm::mat4 transform,
+		std::vector<float>& buffer
+	) const;
 };
 
 // ================================================================================================
@@ -47,8 +51,6 @@ struct MinecraftModelElementFace
 
 struct MinecraftModelElement
 {
-	const MinecraftModel* model;
-
 	glm::vec3 from, to;
 	std::unordered_map<MinecraftModelElementFace::Orientation, MinecraftModelElementFace> faces_by_position;
 
@@ -59,11 +61,9 @@ struct MinecraftModelElement
 		bool rescale;
 	} rotation;
 
-	MinecraftModelElement(const MinecraftModel* model);
-
 	void from_json(const rapidjson::Value::Object& json);
 
-	size_t bake(std::vector<float>& buffer, const std::shared_ptr<const MinecraftAssets>& assets, glm::mat4 transform) const;
+	size_t bake(std::shared_ptr<MinecraftAssets const> const& assets, std::unordered_map<std::string, std::string> const& texture_by_variable, glm::mat4 transform, std::vector<float>& buffer) const;
 };
 
 // ================================================================================================
@@ -73,12 +73,12 @@ struct MinecraftModelElement
 struct MinecraftModel
 {
 	std::string parent_model;
-	std::unordered_map<std::string, std::string> texture_variable_replacement;
+	std::unordered_map<std::string, std::string> texture_by_variable;
 	std::vector<MinecraftModelElement> elements;
 
 	void from_json(const rapidjson::Value::Object& json);
 
 	const MinecraftModel& get_parent_model(const std::shared_ptr<const MinecraftAssets>& assets) const;
 
-	size_t bake(std::vector<float>& buffer, const std::shared_ptr<const MinecraftAssets>& assets, glm::mat4 transform) const;
+	size_t bake(std::shared_ptr<MinecraftAssets const> const& assets, glm::mat4 transform, std::vector<float>& buffer) const;
 };

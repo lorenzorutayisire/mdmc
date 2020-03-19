@@ -63,3 +63,6 @@ target_link_libraries(${BIN} tinyfiledialogs)
 
 # ThreadPool
 include_directories("dep/ThreadPool")
+
+# hat-trie
+include_directories("dep/hat-trie/include")

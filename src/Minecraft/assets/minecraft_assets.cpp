@@ -63,42 +63,33 @@ std::shared_ptr<MinecraftAssets const> MinecraftAssets::load(std::filesystem::pa
 	on_file_load(atlas_image_path);
 	on_file_load(atlas_descriptor_path);
 
-	ThreadPool thread_pool(3);
-	std::mutex mutex;
-	std::vector<std::future<void>> tasks;
-
 	// Model
 	auto model_folder = version_folder / "assets" / "minecraft" / "models" / "block";
 	for (auto const& file : std::filesystem::directory_iterator(model_folder))
 	{
-		tasks.push_back(
-			thread_pool.enqueue(load_model, file.path(), [&, file](MinecraftModel const& model) {
-				auto name = std::string("block/") + file.path().stem().u8string();
-				mutex.lock();
-				assets->model_by_name.insert(std::make_pair(name, model));
-				on_file_load(file.path());
-				mutex.unlock();
-			})
-		);
+		load_model(file.path(), [&, file](MinecraftModel const& model) {
+			auto name = std::string("block/") + file.path().stem().u8string();
+			assets->model_by_name.insert(std::make_pair(name, model));
+			on_file_load(file.path());
+		});
 	}
 
 	// Block state
 	auto block_state_folder = version_folder / "assets" / "minecraft" / "blockstates";
 	for (auto const& file : std::filesystem::directory_iterator(block_state_folder))
 	{
-		tasks.push_back(
-			thread_pool.enqueue(load_block_state, file.path(), [&, file](MinecraftBlockState const& block_state) {
-				auto name = file.path().stem().u8string();
-				mutex.lock();
-				assets->block_state_by_name.insert(std::make_pair(name, block_state));
-				on_file_load(file.path());
-				mutex.unlock();
-			})
-		);
+		load_block_state(file.path(), [&, file](MinecraftBlockState const& block_state) {
+			auto name = file.path().stem().u8string();
+			assets->block_state_by_name[name] = block_state;
+			for (auto& variant : assets->block_state_by_name[name].variant_by_name)
+			{
+				auto variant_name = name + (variant.first.empty() ? "" : "[" + variant.first + "]");
+				assets->block_state_variant_by_name[variant_name] = std::make_pair(variant_name, &variant.second);
+				assets->block_state_variant_by_id.push_back(&assets->block_state_variant_by_name[variant_name]);
+			}
+			on_file_load(file.path());
+		});
 	}
-
-	for (auto const& task : tasks)
-		task.wait();
 
 	return assets;
 }

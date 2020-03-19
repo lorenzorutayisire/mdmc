@@ -40,5 +40,5 @@ void MinecraftBlockState::from_json(const rapidjson::Value::Object& json)
 size_t MinecraftBlockStateVariant::bake(std::vector<float>& buffer, const std::shared_ptr<const MinecraftAssets>& assets, glm::mat4 transform) const
 {
 	// TODO: rotation
-	return this->get_model(assets).bake(buffer, assets, transform);
+	return this->get_model(assets).bake(assets, transform, buffer);
 }
