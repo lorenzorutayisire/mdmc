@@ -11,9 +11,10 @@ FixedTargetCamera::FixedTargetCamera(glm::vec3 const& target) :
 glm::vec3 FixedTargetCamera::get_position()
 {
 	glm::vec3 position;
-	position.x = this->zoom * glm::cos(rotation.x) * glm::cos(rotation.y);
-	position.y = this->zoom * glm::cos(rotation.x) * glm::sin(rotation.y);
-	position.z = this->zoom * glm::sin(rotation.x);
+	float pitch = glm::pi<float>() / 2 - rotation.y;
+	position.x = this->zoom * glm::sin(pitch) * glm::cos(rotation.x);
+	position.y = this->zoom * glm::cos(pitch);
+	position.z = this->zoom * glm::sin(pitch) * glm::sin(rotation.x);
 	return position + this->target;
 }
 
@@ -38,9 +39,9 @@ void FixedTargetCamera::offset_rotation(glm::vec2 const& offset)
 {
 	this->rotation += offset;
 
-	constexpr float radius = glm::pi<float>() / 4; // 45°
-	if (this->rotation.y > radius) this->rotation.y = radius;
-	if (this->rotation.y < -radius) this->rotation.y = -radius;
+	constexpr float _45 = glm::pi<float>() / 4;
+	if (this->rotation.y > _45) this->rotation.y = _45;
+	if (this->rotation.y < -_45) this->rotation.y = -_45;
 }
 
 glm::mat4 FixedTargetCamera::get_matrix()

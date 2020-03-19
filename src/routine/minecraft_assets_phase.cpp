@@ -43,7 +43,7 @@ void MinecraftAssetsPhase::update_camera(GLFWwindow* window, float delta)
 		{
 			this->camera.offset_rotation(glm::vec2(
 				(cursor_x - last_cursor_x) * sensitivity * delta,
-				(last_cursor_y - cursor_y) * sensitivity * delta
+				(cursor_y - last_cursor_y) * sensitivity * delta
 			));
 		}
 		else
@@ -260,7 +260,7 @@ void MinecraftAssetsPhase::ui_main()
 void MinecraftAssetsPhase::render(Stage& stage)
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glClearColor(0.1, 0.5, 0.2, 0);
+	glClearColor(1, 1, 1, 0);
 
 	this->ui_main();
 

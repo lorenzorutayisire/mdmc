@@ -1,5 +1,8 @@
 #include "minecraft_block_state.hpp"
 
+#include <glm/glm.hpp>
+#include <glm/gtx/transform.hpp>
+
 #include "minecraft_assets.hpp"
 
 // ================================================================================================
@@ -39,6 +42,12 @@ void MinecraftBlockState::from_json(const rapidjson::Value::Object& json)
 
 size_t MinecraftBlockStateVariant::bake(std::vector<float>& buffer, const std::shared_ptr<const MinecraftAssets>& assets, glm::mat4 transform) const
 {
-	// TODO: rotation
+	transform = glm::translate(transform, glm::vec3(8, 8, 8));
+
+	transform = glm::rotate(transform, glm::radians<float>(this->x), glm::vec3(1, 0, 0));
+	transform = glm::rotate(transform, glm::radians<float>(this->y), glm::vec3(0, 1, 0));
+
+	transform = glm::translate(transform, -glm::vec3(8, 8, 8));
+
 	return this->get_model(assets).bake(assets, transform, buffer);
 }

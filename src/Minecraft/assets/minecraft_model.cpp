@@ -43,8 +43,7 @@ void MinecraftModelElementFace::from_json(
 
 	this->texture = json["texture"].GetString();
 
-	if (json.HasMember("rotation"))
-		this->rotation = json["rotation"].GetInt();
+	this->rotation = json.HasMember("rotation") ? json["rotation"].GetInt() : 0;
 
 	this->tint_index = json.HasMember("tintindex");
 }
@@ -78,8 +77,9 @@ size_t MinecraftModelElementFace::bake(
 	int right = static_cast<int>(this->orientation) & 1;
 
 	const int gray_sequence[]{0b00, 0b01, 0b11, 0b10};
-	for (int gray_code : gray_sequence)
+	for (int i = 0; i < 4; i++)
 	{
+		int gray_code = gray_sequence[i];
 		int mb = gray_code >> 1;
 		int lb = gray_code & 1;
 
@@ -101,9 +101,13 @@ size_t MinecraftModelElementFace::bake(
 		auto texture = this->get_texture(assets, texture_by_variable);
 		auto texture_from = texture.from + this->from_uv;
 		auto texture_size = this->to_uv - this->from_uv;
+		
+		auto& rot_gray_code = gray_sequence[(i + (this->rotation / 90) % 4) % 4];
+		int rot_mb = rot_gray_code >> 1;
+		int rot_lb = rot_gray_code & 1;
 
-		buffer.push_back(texture_from.x + lb * texture_size.x);
-		buffer.push_back(texture_from.y + mb * texture_size.y);
+		buffer.push_back(texture_from.x + rot_lb * texture_size.x);
+		buffer.push_back(texture_from.y + rot_mb * texture_size.y);
 
 		// Tint index
 		buffer.push_back(this->tint_index);
@@ -144,6 +148,8 @@ void MinecraftModelElement::from_json(const rapidjson::Value::Object& json)
 		this->rotation.angle = rotation["angle"].GetFloat();
 		this->rotation.rescale = rotation.HasMember("rescale") && rotation["rescale"].GetBool();
 	}
+	else
+		this->rotation.angle = 0;
 
 	for (auto& member : json["faces"].GetObject())
 	{
@@ -161,8 +167,22 @@ size_t MinecraftModelElement::bake(
 	std::vector<float>& buffer
 ) const
 {
+	if (this->rotation.angle != 0)
+	{
+		transform = glm::translate(transform, this->rotation.origin);
+		transform = glm::rotate(
+			transform,
+			glm::radians(this->rotation.angle),
+			glm::vec3(
+				this->rotation.axis == 'x' ? 1 : 0,
+				this->rotation.axis == 'y' ? 1 : 0,
+				this->rotation.axis == 'z' ? 1 : 0
+			)
+		);
+		transform = glm::translate(transform, -this->rotation.origin);
+	}
+
 	transform = glm::translate(transform, glm::vec3(this->from));
-	// TOOD: rotation
 	transform = glm::scale(transform, glm::vec3(this->to - this->from));
 
 	size_t vertices_count = 0;
