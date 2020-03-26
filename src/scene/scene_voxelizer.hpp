@@ -2,8 +2,7 @@
 
 #include <glm/glm.hpp>
 
-#include "voxel/voxelizer.hpp"
-#include "voxel/voxel_fragment_list.hpp"
+#include "octree/voxel_list.hpp"
 
 #include "scene.hpp"
 
@@ -17,5 +16,5 @@ private:
 public:
 	SceneVoxelizer();
 
-	std::shared_ptr<VoxelFragmentList> voxelize(const glm::uvec3& grid, const Scene& scene);
+	std::shared_ptr<VoxelList> voxelize(const glm::uvec3& grid, const Scene& scene);
 };

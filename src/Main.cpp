@@ -28,11 +28,6 @@
 
 #define MAX_SIZE_PER_CHUNK 1000000
 
-// RenderDoc
-
-#define DEBUG
-
-
 #define WINDOW_WIDTH  1024
 #define WINDOW_HEIGHT 720
 

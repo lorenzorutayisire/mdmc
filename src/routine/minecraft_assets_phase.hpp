@@ -11,7 +11,14 @@
 #include <tsl/htrie_map.h>
 
 #include "minecraft/minecraft_world.hpp"
-#include "minecraft/minecraft_world_renderer.hpp"
+#include "minecraft/minecraft_renderer.hpp"
+
+#include "minecraft/voxelizer/minecraft_baked_block_pool.hpp"
+#include "minecraft/voxelizer/minecraft_block_voxelizer.hpp"
+
+#include "octree/octree.hpp"
+#include "octree/octree_builder.hpp"
+#include "octree/octree_tracer.hpp"
 
 #include <imgui.h>
 
@@ -21,11 +28,22 @@ public:
 	enum class State
 	{
 		SELECT_MINECRAFT_VERSION,
+		VOXELIZATION_OPTIONS,
 		VIEW
 	};
 
 private:
 	State state = State::SELECT_MINECRAFT_VERSION;
+
+	MinecraftBlockVoxelizer minecraft_block_voxelizer;
+	OctreeBuilder octree_builder;
+	OctreeRenderer octree_tracer;
+
+	unsigned int resolution = 1;
+
+	bool view_block_octree = false;
+	std::shared_ptr<Octree> octree;
+	void test_view_block_octree_input(GLFWwindow* window, float delta);
 
 	std::string version = "1.15.2";
 
@@ -34,20 +52,24 @@ private:
 
 	//std::vector<std::pair<std::string, MinecraftBlockStateVariant const*>> block_by_id;
 	int current_block_id = 0;
-	double last_block_change_time = 0;
-	
-	FixedTargetCamera camera;
-	void update_camera(GLFWwindow* window, float delta);
+	void shift_block_id(bool forward);
 
-	std::shared_ptr<MinecraftBakedAssets const> baked_assets;
-	MinecraftWorldRenderer world_renderer;
+	double last_block_change_time = 0;
+
+	FixedTargetCamera camera;
+	void test_camera_input(GLFWwindow* window, float delta);
+	void test_block_sliding_input(GLFWwindow* window, float delta);
+
+	std::shared_ptr<MinecraftBakedBlockPool> minecraft_baked_block_pool;
+	MinecraftRenderer minecraft_renderer;
 
 	void setup(std::string const& version);
 
 	void ui_menu_bar(unsigned int& y);
 
 	void ui_select_minecraft_version(std::string& current_version, const std::function<void(const std::string&)>& on_load);
-	
+	void ui_voxelization_options();
+
 	void ui_block_info(unsigned int& y);
 	void ui_camera_info(unsigned int& y);
 

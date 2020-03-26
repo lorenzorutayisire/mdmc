@@ -2,11 +2,12 @@
 
 #include "util/gl.hpp"
 #include "minecraft_world.hpp"
-#include "minecraft_baked_assets.hpp"
+
+#include "voxelizer/minecraft_baked_block_pool.hpp"
 
 #include <glm/glm.hpp>
 
-class MinecraftWorldRenderer
+class MinecraftRenderer
 {
 private:
 	Program program;
@@ -20,24 +21,14 @@ private:
 	);
 
 public:
-	MinecraftWorldRenderer();
+	MinecraftRenderer();
 
 	void render_block(
 		glm::mat4 const& camera,
 		glm::mat4 const& transform,
 		glm::vec4 const& tint,
 		std::shared_ptr<MinecraftContext const> const& context,
-		std::shared_ptr<MinecraftBakedAssets const> const& baked_assets,
-		int block_id
-	);
-
-	void render_block(
-		glm::mat4 const& camera,
-		glm::mat4 const& transform,
-		glm::vec4 const& tint,
-		std::shared_ptr<MinecraftContext const> const& context,
-		std::shared_ptr<MinecraftBakedAssets const> const& baked_assets,
-		std::string const& block_name
+		MinecraftBakedBlock const& baked_block
 	);
 
 	void render_world(

@@ -1,0 +1,182 @@
+﻿#version 460
+
+// ================================================================================================
+// 3D OBB intersection
+//
+// Reference:
+// https://www.geometrictools.com/Documentation/DynamicCollisionDetection.pdf
+// ================================================================================================
+
+struct Obb
+{
+	vec3 C;     // The center of the OBB.
+	vec3 A[3];  // The normalized axes of the OBB.
+	float s[3]; // The extent scalars of the OBB.
+};
+
+// Checks whether the 3 axes of the OBB are orthogonal.
+bool check_obb(Obb obb)
+{
+	for (int i = 0; i < 3; i++)
+	{
+		if (dot(obb.A[i], obb.A[(i + 1) % 3]) != 0)
+			return false;
+	}
+	return true;
+}
+
+// Checks whether the projection of the two given OBB onto the axis L overlaps.
+bool proj_overlap(vec3 L, Obb obb1, Obb obb2)
+{
+	vec3 D = obb1.C - obb2.C;
+
+	float R = abs(dot(L, D));
+	float R0 = 0, R1 = 0;
+
+	for (int i  = 0; i <= 2; i++)
+	{
+		R0 += obb1.s[i] * sign(dot(L, obb1.A[i])) * dot(L, obb1.A[i]);
+		R1 += obb2.s[i] * sign(dot(L, obb2.A[i])) * dot(L, obb2.A[i]);
+	}
+
+	return R <= R0 + R1;
+}
+
+// Tests whether the two given OBB collides.
+bool test_collision(Obb obb1, Obb obb2)
+{
+	for (int i = 0; i < 3; i++)
+	{
+		// A
+		if (proj_overlap(obb1.A[i], obb1, obb2))
+			return true;
+
+		// B
+		if (proj_overlap(obb2.A[i], obb1, obb2))
+			return true;
+
+		// AxB
+		for (int j = 0; j < 3; j++)
+		{
+			if (proj_overlap(cross(obb1.A[i], obb2.A[j]), obb1, obb2))
+				return true;
+		}
+	}
+
+	return false;
+}
+
+// ================================================================================================
+// Minecraft block pool
+// ================================================================================================
+
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+		
+#define FACE_WEST  0
+#define FACE_EAST  1
+#define FACE_DOWN  2
+#define FACE_UP    3
+#define FACE_SOUTH 4
+#define FACE_NORTH 5
+
+#define VERTEX_SIZE (3 + 1 + 2)
+#define FACE_SIZE   (VERTEX_SIZE * 4)
+#define OBB_SIZE    (FACE_SIZE * 6)
+
+layout(binding = 0, std430) buffer b_baked_block_pool
+{
+	float v[];
+};
+
+uniform uint u_start;
+uniform uint u_count;
+
+// Given the relative element, face and the vertex id, gets the vertex within the buffer for this block.
+vec3 get_vertex_position(uint element_id, uint face_id, uint vertex_id)
+{
+	uint loc = u_start + element_id * OBB_SIZE + face_id * FACE_SIZE + vertex_id * VERTEX_SIZE;
+	return vec3(v[loc], v[loc + 1], v[loc + 2]);
+}
+
+// ================================================================================================
+// Minecraft block pool's voxel list
+// ================================================================================================
+
+#define COLLISION_DETECTED_VOXEL vec4(1)
+#define ERROR_VOXEL              vec4(0)
+
+layout(binding = 1) uniform atomic_uint u_alloc;
+
+layout(binding = 2, rgb10_a2ui) uniform uimageBuffer u_voxel_position;
+layout(binding = 3, rgba8) uniform imageBuffer u_voxel_color;
+
+uniform uint u_store;
+
+void push_voxel(uvec3 position, vec4 color)
+{
+	uint loc = atomicCounterIncrement(u_alloc);
+	if (u_store == 1)
+	{
+		imageStore(u_voxel_position, int(loc), uvec4(position, 0));
+		imageStore(u_voxel_color, int(loc), color);
+	}
+}
+
+void main()
+{
+	uvec3 pos = gl_GlobalInvocationID;
+	vec4 col;
+
+	// The voxel is the OBB1.
+	Obb voxel;
+	voxel.C = pos + vec3(0.5);
+	voxel.A = vec3[](
+		vec3(1, 0, 0),
+		vec3(0, 1, 0),
+		vec3(0, 0, 1)
+	);
+	voxel.s = float[](1, 1, 1);
+
+	if (!check_obb(voxel))
+	{
+		push_voxel(pos, ERROR_VOXEL);
+		return;
+	}
+
+	uint n_elements = u_count / (OBB_SIZE / VERTEX_SIZE);
+	for (uint i = 0; i < n_elements; i++)
+	{
+		// The Minecraft element is the OBB2.
+		Obb obb;
+
+		vec3 h_a0 = (get_vertex_position(i, FACE_WEST, 1) - get_vertex_position(i, FACE_WEST, 0)) / 2;
+		vec3 h_a1 = (get_vertex_position(i, FACE_WEST, 2) - get_vertex_position(i, FACE_WEST, 1)) / 2;
+		vec3 h_a2 = (get_vertex_position(i, FACE_DOWN, 2) - get_vertex_position(i, FACE_DOWN, 1)) / 2;
+
+		obb.C = h_a0 + h_a1 + h_a2;
+		obb.A = vec3[](
+			normalize(h_a0),
+			normalize(h_a1),
+			normalize(h_a2)
+		);
+		obb.s = float[](
+			length(h_a0),
+			length(h_a1),
+			length(h_a2)
+		);
+
+		if (!check_obb(obb))
+		{
+			push_voxel(pos, ERROR_VOXEL);
+			return;
+		}
+
+		if (test_collision(voxel, obb))
+		{
+			push_voxel(pos, COLLISION_DETECTED_VOXEL);
+			return;
+		}
+	}
+
+	// No collision
+}

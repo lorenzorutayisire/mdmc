@@ -1,9 +1,9 @@
 #include "octree_builder.hpp"
 
 #include <filesystem>
+#include <iostream>
 
 #include <glm/glm.hpp>
-
 
 // ================================================================================================
 // OctreeBuilder
@@ -14,18 +14,22 @@ OctreeBuilder::OctreeBuilder()
 	// node_flag
 	{
 		Shader shader(GL_COMPUTE_SHADER);
-		shader.source_from_file("resources/shaders/svo/node_flag.comp");
+		shader.source_from_file("resources/shaders/svo_node_flag.comp");
 		if (!shader.compile())
 			throw;
 
 		this->node_flag.attach_shader(shader);
-		this->node_flag.link();
+		if (!this->node_flag.link())
+		{
+			std::cerr << this->node_flag.get_log() << std::endl;
+			throw;
+		}
 	}
 
 	// node_alloc
 	{
 		Shader shader(GL_COMPUTE_SHADER);
-		shader.source_from_file("resources/shaders/svo/node_alloc.comp");
+		shader.source_from_file("resources/shaders/svo_node_alloc.comp");
 		if (!shader.compile())
 			throw;
 
@@ -36,7 +40,7 @@ OctreeBuilder::OctreeBuilder()
 	// node_init
 	{
 		Shader shader(GL_COMPUTE_SHADER);
-		shader.source_from_file("resources/shaders/svo/node_init.comp");
+		shader.source_from_file("resources/shaders/svo_node_init.comp");
 		if (!shader.compile())
 			throw;
 
@@ -47,7 +51,7 @@ OctreeBuilder::OctreeBuilder()
 	// store_leaf
 	{
 		Shader shader(GL_COMPUTE_SHADER);
-		shader.source_from_file("resources/shaders/svo/store_leaf.comp");
+		shader.source_from_file("resources/shaders/svo_store_leaf.comp");
 		if (!shader.compile())
 			throw;
 
@@ -56,7 +60,7 @@ OctreeBuilder::OctreeBuilder()
 	}
 }
 
-std::shared_ptr<Octree> OctreeBuilder::build(const std::shared_ptr<VoxelFragmentList>& voxel_list, size_t octree_max_level)
+std::shared_ptr<Octree> OctreeBuilder::build(std::shared_ptr<VoxelList> const& voxel_list, size_t octree_max_level)
 {
 	auto octree = std::make_shared<Octree>(octree_max_level);
 
@@ -95,6 +99,8 @@ std::shared_ptr<Octree> OctreeBuilder::build(const std::shared_ptr<VoxelFragment
 		octree->bind(1);
 		alloc_counter.bind(2);
 
+		alloc_counter.set_value(0);
+
 		glDispatchCompute(glm::ceil(count / float(work_group_size)), 1, 1);
 
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT);
@@ -109,8 +115,8 @@ std::shared_ptr<Octree> OctreeBuilder::build(const std::shared_ptr<VoxelFragment
 		// node_init
 		this->node_init.use();
 
-		glUniform1ui(this->node_alloc.get_uniform_location("u_alloc_start"), start);
-		glUniform1ui(this->node_alloc.get_uniform_location("u_alloc_count"), count);
+		glUniform1ui(this->node_alloc.get_uniform_location("u_start"), start);
+		glUniform1ui(this->node_alloc.get_uniform_location("u_count"), count);
 
 		octree->bind(1);
 

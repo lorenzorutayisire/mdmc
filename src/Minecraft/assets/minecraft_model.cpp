@@ -186,8 +186,12 @@ size_t MinecraftModelElement::bake(
 	transform = glm::scale(transform, glm::vec3(this->to - this->from));
 
 	size_t vertices_count = 0;
-	for (auto& face : this->faces_by_position)
-		vertices_count += face.second.bake(assets, texture_by_variable, transform, buffer);
+	for (int i = 0; i < static_cast<int>(MinecraftModelElementFace::Orientation::size); i++)
+	{
+		auto orientation = static_cast<MinecraftModelElementFace::Orientation>(i);
+		auto face = this->faces_by_position.at(orientation);
+		vertices_count += face.bake(assets, texture_by_variable, transform, buffer);
+	}
 	return vertices_count;
 }
 

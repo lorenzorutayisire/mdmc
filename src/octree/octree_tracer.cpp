@@ -23,16 +23,22 @@ OctreeRenderer::OctreeRenderer()
 		throw;
 }
 
-void OctreeRenderer::render(glm::uvec2 screen_size, const tdogl::Camera& camera, const std::shared_ptr<Octree>& octree)
+void OctreeRenderer::render(
+	glm::uvec2 screen_size,
+	glm::mat4 const& camera_projection,
+	glm::mat4 const& camera_view,
+	glm::vec3 const& camera_position,
+	std::shared_ptr<Octree> const& octree
+)
 {
 	this->program.use();
 
 	glUniform1i(this->program.get_uniform_location("uWidth"), screen_size.x);
 	glUniform1i(this->program.get_uniform_location("uHeight"), screen_size.y);
 
-	glUniformMatrix4fv(this->program.get_uniform_location("uProjection"), 1, GL_FALSE, glm::value_ptr(camera.projection()));
-	glUniformMatrix4fv(this->program.get_uniform_location("uView"), 1, GL_FALSE, glm::value_ptr(camera.view()));
-	glUniform3fv(this->program.get_uniform_location("uPosition"), 1, glm::value_ptr(camera.position()));
+	glUniformMatrix4fv(this->program.get_uniform_location("uProjection"), 1, GL_FALSE, glm::value_ptr(camera_projection));
+	glUniformMatrix4fv(this->program.get_uniform_location("uView"), 1, GL_FALSE, glm::value_ptr(camera_view));
+	glUniform3fv(this->program.get_uniform_location("uPosition"), 1, glm::value_ptr(camera_position));
 
 	octree->bind(3);
 

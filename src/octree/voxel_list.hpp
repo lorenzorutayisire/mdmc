@@ -4,12 +4,12 @@
 
 #include "util/gl.hpp"
 
-struct VoxelFragmentList
+struct VoxelList
 {
-	TextureBuffer voxel_position;
-	TextureBuffer voxel_color;
-
+	TextureBuffer position_buffer, color_buffer;
 	size_t size;
+
+	VoxelList(size_t size);
 
 	void bind(GLuint position_binding, GLuint color_binding);
 };

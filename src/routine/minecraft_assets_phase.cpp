@@ -25,14 +25,22 @@ glm::mat4 get_projection()
 	return glm::perspective(fov, aspect_ratio, near_plane, far_plane);
 }
 
-void MinecraftAssetsPhase::update_camera(GLFWwindow* window, float delta)
+MinecraftAssetsPhase::MinecraftAssetsPhase() :
+	camera(glm::vec3(8, 8, 8))
+{}
+
+/*
+	Tests and updates the camera movements.
+*/
+void MinecraftAssetsPhase::test_camera_input(GLFWwindow* window, float delta)
 {
-	// Rotation
+	if (ImGui::IsAnyWindowHovered())
+		return;
+
 	static float const sensitivity = 0.1f;
 
 	static double last_cursor_x = 0, last_cursor_y = 0;
 	static bool capture_cursor = false;
-
 
 	if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
 	{
@@ -74,10 +82,68 @@ void MinecraftAssetsPhase::update_camera(GLFWwindow* window, float delta)
 		this->camera.offset_zoom(0.1f);
 }
 
-MinecraftAssetsPhase::MinecraftAssetsPhase() :
-	camera(glm::vec3(8, 8, 8))
-{}
+/*
+	Tests and manages the sliding among Minecraft blocks.
+*/
+void MinecraftAssetsPhase::test_block_sliding_input(GLFWwindow* window, float delta)
+{
+	static const double max_delay = 0.500;
+	static double delay = max_delay;
 
+	bool left_key = glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS;
+	bool right_key = glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS;
+	if (left_key || right_key)
+	{
+		double current_time = glfwGetTime();
+		if (current_time - this->last_block_change_time >= delay)
+		{
+			this->shift_block_id(right_key);
+			
+			auto size = this->assets->block_state_variant_by_id.size();
+			if (this->current_block_id < 0) this->current_block_id = 0;
+			if (this->current_block_id >= size) this->current_block_id = size - 1;
+
+			delay /= 1.2; // If kept pressed, the scroll becomes faster.
+			this->last_block_change_time = glfwGetTime();
+		}
+	}
+	else
+	{
+		this->last_block_change_time = 0;
+		delay = max_delay;
+	}
+}
+
+/*
+	Tests whether the view block octree mode is being toggled.
+*/
+void MinecraftAssetsPhase::test_view_block_octree_input(GLFWwindow* window, float delta)
+{
+	bool old = this->view_block_octree;
+	this->view_block_octree = glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS;
+
+	if (this->octree == nullptr && (this->view_block_octree && !old))
+	{
+		std::cout << "Building Octree..." << std::endl;
+
+		// If the octree isn't ready yet and the user wants to see it, we need to build it.
+		auto block = this->minecraft_baked_block_pool->get_block(this->current_block_id);
+		auto voxel_list = this->minecraft_block_voxelizer.voxelize(block, 8);
+		this->octree = this->octree_builder.build(voxel_list, 8);
+
+		std::cout << "Done" << std::endl;
+	}
+}
+
+/*
+	Shifts the current Minecraft block ID.
+*/
+void MinecraftAssetsPhase::shift_block_id(bool forward)
+{
+	this->current_block_id += forward ? 1 : -1;
+	this->view_block_octree = false;
+	this->octree = nullptr;
+}
 
 void MinecraftAssetsPhase::update(Stage& stage, float delta)
 {
@@ -85,35 +151,9 @@ void MinecraftAssetsPhase::update(Stage& stage, float delta)
 
 	if (this->state == State::VIEW)
 	{
-		this->update_camera(stage.window, delta);
-
-		// Block slider
-		static const double max_delay = 0.500;
-		static double delay = max_delay;
-
-		// Issue a block change every certain delay, if the keys are pressed.
-		bool left_key = glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS;
-		bool right_key = glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS;
-		if (left_key || right_key)
-		{
-			double current_time = glfwGetTime();
-			if (current_time - this->last_block_change_time >= delay)
-			{
-				this->current_block_id += left_key ? -1 : 1;
-
-				auto size = this->assets->block_state_variant_by_id.size();
-				if (this->current_block_id < 0) this->current_block_id = 0;
-				if (this->current_block_id >= size) this->current_block_id = size - 1;
-
-				delay /= 1.2; // If kept pressed, the scroll becomes faster.
-				this->last_block_change_time = glfwGetTime();
-			}
-		}
-		else
-		{
-			this->last_block_change_time = 0;
-			delay = max_delay;
-		}
+		this->test_camera_input(stage.window, delta);
+		this->test_block_sliding_input(stage.window, delta);
+		this->test_view_block_octree_input(stage.window, delta);
 	}
 }
 
@@ -138,7 +178,10 @@ void MinecraftAssetsPhase::setup(std::string const& version)
 
 	// Bakes the assets blocks.
 	start_ms = current_ms();
-	this->baked_assets = MinecraftBakedAssets::bake(this->assets);
+
+	this->minecraft_baked_block_pool = std::make_shared<MinecraftBakedBlockPool>();
+	this->minecraft_baked_block_pool->bake(this->assets);
+
 	end_ms = current_ms();
 	std::cout << "Minecraft assets blocks baked in " << (end_ms - start_ms) << "ms." << std::endl;
 }
@@ -169,6 +212,30 @@ void MinecraftAssetsPhase::ui_select_minecraft_version(std::string& selected_ver
 		if (ImGui::Button("Load"))
 		{
 			on_load(selected_version);
+			ImGui::CloseCurrentPopup();
+		}
+
+		ImGui::EndPopup();
+	}
+}
+
+/*
+	Choose the resolution to use and run the voxelization process.
+*/
+void MinecraftAssetsPhase::ui_voxelization_options()
+{
+	if (ImGui::BeginPopupModal("voxelization_options",
+		NULL,
+		ImGuiWindowFlags_AlwaysAutoResize |
+		ImGuiWindowFlags_NoTitleBar |
+		ImGuiWindowFlags_NoMove))
+	{
+		ImGui::SliderInt("Resolution", (int*) &this->resolution, 1, 9);
+
+		if (ImGui::Button("Change"))
+		{
+			this->view_block_octree = true;
+			this->state = State::VIEW;
 			ImGui::CloseCurrentPopup();
 		}
 
@@ -231,6 +298,12 @@ void MinecraftAssetsPhase::ui_menu_bar(unsigned int& y)
 			ImGui::EndMenu();
 		}
 
+		if (ImGui::BeginMenu("Voxelization options"))
+		{
+			this->state = State::VOXELIZATION_OPTIONS;
+			ImGui::EndMenu();
+		}
+
 		y += ImGui::GetWindowSize().y;
 		ImGui::EndMainMenuBar();
 	}
@@ -242,35 +315,57 @@ void MinecraftAssetsPhase::ui_main()
 		this->setup(version);
 		this->state = State::VIEW;
 	});
+	this->ui_voxelization_options();
 
 	unsigned int y = 0;
 
 	this->ui_menu_bar(y);
 
-	if (this->state == State::SELECT_MINECRAFT_VERSION)
-		ImGui::OpenPopup("select_minecraft_version");
-
-	if (this->state == State::VIEW)
+	switch (this->state)
 	{
+	case State::SELECT_MINECRAFT_VERSION:
+		ImGui::OpenPopup("select_minecraft_version");
+		break;
+
+	case State::VOXELIZATION_OPTIONS:
+		ImGui::OpenPopup("voxelization_options");
+		break;
+
+	case State::VIEW:
 		this->ui_block_info(y);
 		this->ui_camera_info(y);
+		break;
 	}
 }
 
 void MinecraftAssetsPhase::render(Stage& stage)
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glClearColor(1, 1, 1, 0);
+	glClearColor(0xA5 / float(0xFF), 0xD6 / float(0xFF), 0xA7 / float(0xFF), 0);
 
 	this->ui_main();
 
-	if (this->baked_assets != nullptr)
-		this->world_renderer.render_block(
+	if (!this->view_block_octree && this->minecraft_baked_block_pool != nullptr)
+	{
+		this->minecraft_renderer.render_block(
 			get_projection() * this->camera.get_matrix(),
 			glm::mat4(1),
 			glm::vec4(0, 1, 0, 1),
 			this->context,
-			this->baked_assets,
-			this->current_block_id
+			this->minecraft_baked_block_pool->get_block(this->current_block_id)
 		);
+	}
+	else if (this->view_block_octree && this->octree != nullptr)
+	{
+		int width, height;
+		glfwGetWindowSize(stage.window, &width, &height);
+		
+		this->octree_tracer.render(
+			glm::uvec2(width, height),
+			get_projection(),
+			this->camera.get_matrix(),
+			this->camera.get_position(),
+			this->octree
+		);
+	}
 }

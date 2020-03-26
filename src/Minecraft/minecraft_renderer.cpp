@@ -1,10 +1,10 @@
-#include "minecraft_world_renderer.hpp"
+#include "minecraft_renderer.hpp"
 
 #include <iostream>
 
 #include <glm/gtc/type_ptr.hpp>
 
-void MinecraftWorldRenderer::render(
+void MinecraftRenderer::render(
 	glm::mat4 const& camera,
 	glm::mat4 const& transform,
 	glm::vec4 const& tint,
@@ -12,6 +12,9 @@ void MinecraftWorldRenderer::render(
 	std::function<void()> const& draw_call
 )
 {
+	glEnable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -30,17 +33,17 @@ void MinecraftWorldRenderer::render(
 	this->program.unuse();
 }
 
-MinecraftWorldRenderer::MinecraftWorldRenderer()
+MinecraftRenderer::MinecraftRenderer()
 {
 	Shader vert(GL_VERTEX_SHADER);
-	vert.source_from_file("resources/shaders/minecraft_world.vert");
+	vert.source_from_file("resources/shaders/mc_render.vert");
 	if (!vert.compile())
 		throw;
 
 	this->program.attach_shader(vert);
 
 	Shader frag(GL_FRAGMENT_SHADER);
-	frag.source_from_file("resources/shaders/minecraft_world.frag");
+	frag.source_from_file("resources/shaders/mc_render.frag");
 	if (!frag.compile())
 		throw;
 
@@ -53,35 +56,20 @@ MinecraftWorldRenderer::MinecraftWorldRenderer()
 	}
 }
 
-void MinecraftWorldRenderer::render_block(
+void MinecraftRenderer::render_block(
 	glm::mat4 const& camera,
 	glm::mat4 const& transform,
 	glm::vec4 const& tint,
 	std::shared_ptr<MinecraftContext const> const& context,
-	std::shared_ptr<MinecraftBakedAssets const> const& baked_assets,
-	int block_id
+	MinecraftBakedBlock const& baked_block
 )
 {
 	this->render(camera, transform, tint, context,[&] {
-		baked_assets->draw(block_id);
+		baked_block.draw();
 	});
 }
 
-void MinecraftWorldRenderer::render_block(
-	glm::mat4 const& camera,
-	glm::mat4 const& transform,
-	glm::vec4 const& tint,
-	std::shared_ptr<MinecraftContext const> const& context,
-	std::shared_ptr<MinecraftBakedAssets const> const& baked_assets,
-	std::string const& block_name
-)
-{
-	this->render(camera, transform, tint, context, [&] {
-		baked_assets->draw(block_name);
-	});
-}
-
-void MinecraftWorldRenderer::render_world(
+void MinecraftRenderer::render_world(
 	glm::mat4 const& camera,
 	glm::mat4 const& transform,
 	glm::vec4 const& tint,

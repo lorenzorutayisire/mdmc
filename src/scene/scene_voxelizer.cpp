@@ -59,7 +59,7 @@ void render(Program& program, const Scene& scene)
 	}
 }
 
-std::shared_ptr<VoxelFragmentList> SceneVoxelizer::voxelize(const glm::uvec3& grid, const Scene& scene)
+std::shared_ptr<VoxelList> SceneVoxelizer::voxelize(const glm::uvec3& grid, const Scene& scene)
 {
 	this->program.use();
 
@@ -73,7 +73,7 @@ std::shared_ptr<VoxelFragmentList> SceneVoxelizer::voxelize(const glm::uvec3& gr
 
 	glUniform3uiv(program.get_uniform_location("u_grid"), 1, glm::value_ptr(grid));
 
-	auto result = std::make_shared<VoxelFragmentList>();
+	auto result = std::make_shared<VoxelList>(2); // TODO
 
 	/* Count */
 	glUniform1ui(program.get_uniform_location("u_can_store"), 0);

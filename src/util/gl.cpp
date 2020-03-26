@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <vector>
+#include <iostream>
 
 // ================================================================================================
 // Shader
@@ -185,7 +186,7 @@ AtomicCounter::~AtomicCounter()
 GLuint AtomicCounter::get_value()
 {
 	glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, this->name);
-	GLuint* value = (GLuint*)glMapBufferRange(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), GL_MAP_READ_BIT);
+	GLuint* value = (GLuint*) glMapBufferRange(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint), GL_MAP_READ_BIT);
 
 	glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, 0);
 
@@ -195,7 +196,7 @@ GLuint AtomicCounter::get_value()
 void AtomicCounter::set_value(GLuint value)
 {
 	glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, this->name);
-	glBufferData(GL_ATOMIC_COUNTER_BUFFER, sizeof(GLuint), &value, GL_STATIC_DRAW);
+	glBufferData(GL_ATOMIC_COUNTER_BUFFER, sizeof(GLuint), &value, GL_DYNAMIC_DRAW);
 
 	glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, 0);
 }

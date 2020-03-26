@@ -21,7 +21,17 @@ struct MinecraftModel;
 
 struct MinecraftModelElementFace
 {
-	enum class Orientation { WEST, EAST, DOWN, UP, SOUTH, NORTH };
+	enum class Orientation
+	{
+		WEST,
+		EAST,
+		DOWN,
+		UP,
+		SOUTH,
+		NORTH,
+		size
+	};
+
 	Orientation orientation;
 
 	glm::vec2 from_uv, to_uv;

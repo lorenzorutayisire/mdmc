@@ -16,7 +16,7 @@ uint node_offset(uvec3 position, uint level)
 	uint shift = u_octree_max_level - level;
 
 	// Masks out the bits that are outside Octree representation.
-	position &= pow(2, u_octree_max_level) - 1;
+	position &= int(pow(2, u_octree_max_level) - 1);
 
 	result |= ((position.x >> shift) & 1u) << 2;
 	result |= ((position.y >> shift) & 1u) << 1;

@@ -4,7 +4,7 @@
 
 #include "util/gl.hpp"
 
-#include "voxel/voxel_fragment_list.hpp"
+#include "voxel_list.hpp"
 #include "octree.hpp"
 
 class OctreeBuilder
@@ -19,5 +19,5 @@ private:
 public:
 	OctreeBuilder();
 
-	std::shared_ptr<Octree> build(const std::shared_ptr<VoxelFragmentList>& voxel_list, size_t octree_max_resolution);
+	std::shared_ptr<Octree> build(std::shared_ptr<VoxelList> const& voxel_list, size_t octree_max_resolution);
 };
