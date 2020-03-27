@@ -1,7 +1,8 @@
-#include "minecraft_model.hpp"
+aa#include "minecraft_model.hpp"
 
 #include <stdexcept>
 #include <string>
+#include <iostream>
 
 #include <glm/gtx/transform.hpp>
 
@@ -156,7 +157,27 @@ void MinecraftModelElement::from_json(const rapidjson::Value::Object& json)
 		MinecraftModelElementFace face;
 		face.orientation = orientation_by_name.at(member.name.GetString());
 		face.from_json(this, member.value.GetObject());
-		faces_by_position.insert(std::make_pair(face.orientation, face));
+		this->face_by_position.insert(std::make_pair(face.orientation, face));
+	}
+
+	// If the element adds faces but not with all orientations, here we add them.
+	// This is done to ensure baking consistency.
+	if (this->face_by_position.size() > 0 && this->face_by_position.size() < 6)
+	{
+		for (auto& member : orientation_by_name)
+		{
+			if (this->face_by_position.find(member.second) == this->face_by_position.end())
+			{
+				MinecraftModelElementFace face;
+				face.orientation = member.second;
+				face.from_uv = glm::vec3(0);
+				face.to_uv = glm::vec3(0);
+				face.texture = "block/torch"; // Some dummy texture invisible at (0, 0).
+				face.rotation = 0;
+				face.tint_index = false;
+				this->face_by_position.insert(std::make_pair(face.orientation, face));
+			}
+		}
 	}
 }
 
@@ -186,11 +207,16 @@ size_t MinecraftModelElement::bake(
 	transform = glm::scale(transform, glm::vec3(this->to - this->from));
 
 	size_t vertices_count = 0;
-	for (int i = 0; i < static_cast<int>(MinecraftModelElementFace::Orientation::size); i++)
+
+	// Some models may only be implementations and their faces are defined in parent models.
+	if (this->face_by_position.size() > 0)
 	{
-		auto orientation = static_cast<MinecraftModelElementFace::Orientation>(i);
-		auto face = this->faces_by_position.at(orientation);
-		vertices_count += face.bake(assets, texture_by_variable, transform, buffer);
+		for (int i = 0; i < static_cast<int>(MinecraftModelElementFace::Orientation::size); i++)
+		{
+			auto orientation = static_cast<MinecraftModelElementFace::Orientation>(i);
+			auto face = this->face_by_position.at(orientation);
+			vertices_count += face.bake(assets, texture_by_variable, transform, buffer);
+		}
 	}
 	return vertices_count;
 }

@@ -62,7 +62,7 @@ struct MinecraftModelElementFace
 struct MinecraftModelElement
 {
 	glm::vec3 from, to;
-	std::unordered_map<MinecraftModelElementFace::Orientation, MinecraftModelElementFace> faces_by_position;
+	std::unordered_map<MinecraftModelElementFace::Orientation, MinecraftModelElementFace> face_by_position;
 
 	struct {
 		glm::vec3 origin;

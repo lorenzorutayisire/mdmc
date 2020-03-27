@@ -7,12 +7,9 @@
 struct Octree
 {
 	const size_t max_resolution;
-
-	const GLuint texture_name;
-	const GLuint buffer_name;
+	TextureBuffer buffer;
 
 	Octree(size_t max_resolution);
-	~Octree();
 
 	void bind(GLuint binding);
 

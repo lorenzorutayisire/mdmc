@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <thread>
 #include <string>
+#include <iostream>
 
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>

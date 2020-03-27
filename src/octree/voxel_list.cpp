@@ -4,7 +4,7 @@ VoxelList::VoxelList(size_t size) :
 	size(size)
 {
 	this->position_buffer.load_data(size * sizeof(GLuint), NULL, GL_DYNAMIC_DRAW);
-	this->position_buffer.set_format(GL_RGB10_A2UI);
+	this->position_buffer.set_format(GL_R32UI);
 
 	this->color_buffer.load_data(size * sizeof(GLuint), NULL, GL_DYNAMIC_DRAW);
 	this->color_buffer.set_format(GL_RGBA8);

@@ -19,7 +19,8 @@ bool check_obb(Obb obb)
 {
 	for (int i = 0; i < 3; i++)
 	{
-		if (dot(obb.A[i], obb.A[(i + 1) % 3]) != 0)
+		float d = dot(obb.A[i], obb.A[(i + 1) % 3]);
+		if (d <= -0.1 || d >= 0.1)
 			return false;
 	}
 	return true;
@@ -79,9 +80,7 @@ layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 #define FACE_SOUTH 4
 #define FACE_NORTH 5
 
-#define VERTEX_SIZE (3 + 1 + 2)
-#define FACE_SIZE   (VERTEX_SIZE * 4)
-#define OBB_SIZE    (FACE_SIZE * 6)
+#define VERTEX_SIZE (3 + 2 + 1)
 
 layout(binding = 0, std430) buffer b_baked_block_pool
 {
@@ -94,7 +93,8 @@ uniform uint u_count;
 // Given the relative element, face and the vertex id, gets the vertex within the buffer for this block.
 vec3 get_vertex_position(uint element_id, uint face_id, uint vertex_id)
 {
-	uint loc = u_start + element_id * OBB_SIZE + face_id * FACE_SIZE + vertex_id * VERTEX_SIZE;
+	uint vertex_loc = u_start + element_id * (6 * 4) + face_id * 4 + vertex_id;
+	uint loc = vertex_loc * VERTEX_SIZE;
 	return vec3(v[loc], v[loc + 1], v[loc + 2]);
 }
 
@@ -139,11 +139,11 @@ void main()
 
 	if (!check_obb(voxel))
 	{
-		push_voxel(pos, ERROR_VOXEL);
+		push_voxel(pos, vec4(1, 0, 0, 1)); // TODO: ERROR_VOXEL
 		return;
 	}
 
-	uint n_elements = u_count / (OBB_SIZE / VERTEX_SIZE);
+	uint n_elements = u_count / (6 * 4);
 	for (uint i = 0; i < n_elements; i++)
 	{
 		// The Minecraft element is the OBB2.
@@ -153,21 +153,19 @@ void main()
 		vec3 h_a1 = (get_vertex_position(i, FACE_WEST, 2) - get_vertex_position(i, FACE_WEST, 1)) / 2;
 		vec3 h_a2 = (get_vertex_position(i, FACE_DOWN, 2) - get_vertex_position(i, FACE_DOWN, 1)) / 2;
 
-		obb.C = h_a0 + h_a1 + h_a2;
-		obb.A = vec3[](
-			normalize(h_a0),
-			normalize(h_a1),
-			normalize(h_a2)
-		);
-		obb.s = float[](
-			length(h_a0),
-			length(h_a1),
-			length(h_a2)
-		);
+		obb.C = h_a0 + h_a1 + h_a2; // TODO
+
+		obb.A[0] = normalize(h_a0);
+		obb.A[1] = normalize(h_a1);
+		obb.A[2] = normalize(h_a2);
+
+		obb.s[0] = length(h_a0);
+		obb.s[1] = length(h_a1);
+		obb.s[2] = length(h_a2);
 
 		if (!check_obb(obb))
 		{
-			push_voxel(pos, ERROR_VOXEL);
+			push_voxel(pos, vec4(0, 1, 1, 1));
 			return;
 		}
 
@@ -176,6 +174,8 @@ void main()
 			push_voxel(pos, COLLISION_DETECTED_VOXEL);
 			return;
 		}
+
+		push_voxel(pos, vec4(0, 1, 0, 1));
 	}
 
 	// No collision

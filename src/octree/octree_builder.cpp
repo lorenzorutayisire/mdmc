@@ -5,6 +5,8 @@
 
 #include <glm/glm.hpp>
 
+#include "util/render_doc.hpp"
+
 // ================================================================================================
 // OctreeBuilder
 // ================================================================================================
@@ -83,8 +85,9 @@ std::shared_ptr<Octree> OctreeBuilder::build(std::shared_ptr<VoxelList> const& v
 		octree->bind(1);
 		voxel_list->bind(2, 3);
 
-		glDispatchCompute(glm::ceil(voxel_list->size / float(work_group_size)), 1, 1);
-
+		RenderDoc().capture([&] {
+			glDispatchCompute(glm::ceil(voxel_list->size / float(work_group_size)), 1, 1);
+		});
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 		this->node_flag.unuse();
@@ -101,8 +104,9 @@ std::shared_ptr<Octree> OctreeBuilder::build(std::shared_ptr<VoxelList> const& v
 
 		alloc_counter.set_value(0);
 
-		glDispatchCompute(glm::ceil(count / float(work_group_size)), 1, 1);
-
+		RenderDoc().capture([&] {
+			glDispatchCompute(glm::ceil(count / float(work_group_size)), 1, 1);
+		});
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT);
 
 		this->node_alloc.unuse();
@@ -120,8 +124,9 @@ std::shared_ptr<Octree> OctreeBuilder::build(std::shared_ptr<VoxelList> const& v
 
 		octree->bind(1);
 
-		glDispatchCompute(glm::ceil(count / float(work_group_size)), 1, 1);
-
+		RenderDoc().capture([&] {
+			glDispatchCompute(glm::ceil(count / float(work_group_size)), 1, 1);
+		});
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 		this->node_init.unuse();
@@ -135,8 +140,9 @@ std::shared_ptr<Octree> OctreeBuilder::build(std::shared_ptr<VoxelList> const& v
 
 	voxel_list->bind(2, 3);
 
-	glDispatchCompute(glm::ceil(count / float(work_group_size)), 1, 1);
-
+	RenderDoc().capture([&] {
+		glDispatchCompute(glm::ceil(count / float(work_group_size)), 1, 1);
+	});
 	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 	this->store_leaf.unuse();
