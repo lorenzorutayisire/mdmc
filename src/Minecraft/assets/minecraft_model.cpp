@@ -1,4 +1,4 @@
-aa#include "minecraft_model.hpp"
+#include "minecraft_model.hpp"
 
 #include <stdexcept>
 #include <string>
