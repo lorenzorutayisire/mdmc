@@ -19,9 +19,10 @@ RenderDoc::RenderDoc()
 void RenderDoc::capture(std::function<void(void)> const& code)
 {
 	if (this->handle)
-	{
 		this->handle->StartFrameCapture(NULL, NULL);
-		code();
+	
+	code();
+
+	if (this->handle)
 		this->handle->EndFrameCapture(NULL, NULL);
-	}
 }
