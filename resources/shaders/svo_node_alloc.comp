@@ -13,21 +13,22 @@ uniform uint u_alloc_start; // The last free index of the buffer, where to alloc
 
 void main()
 {
-	uint node_addr = gl_GlobalInvocationID.x;
-	if (node_addr >= u_count)
+	uint id = gl_GlobalInvocationID.x;
+	if (id >= u_count)
 		return;
 
-	if ((node_addr & 0x80000000) == 1)
+	uint node_loc = u_start + id;
+
+	uint node_val = imageLoad(u_octree, int(node_loc)).r;
+	if ((node_val & 0x80000000) != 0) // The node has been flagged.
 	{
-		uint child_addr;
-		
-		child_addr = atomicCounterIncrement(u_alloc_counter);
+		uint child_addr = atomicCounterIncrement(u_alloc_counter);
 
-		child_addr *= 8;
-		child_addr += u_alloc_start;
-		child_addr |= 0x80000000;
+		child_addr *= 8;			 // Every node takes 8 cells.
+		child_addr += u_alloc_start; // The position of the child starts from the current free index.
+		child_addr |= 0x80000000;    // Masks it.
 
-		imageStore(u_octree, int(u_start + node_addr), uvec4(child_addr));
+		imageStore(u_octree, int(node_loc), uvec4(child_addr));
 	}
 }
 

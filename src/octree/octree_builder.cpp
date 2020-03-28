@@ -72,7 +72,7 @@ std::shared_ptr<Octree> OctreeBuilder::build(std::shared_ptr<VoxelList> const& v
 	GLuint count = 1;
 	GLuint alloc_start = 1;
 
-	const GLuint work_group_size = 32;
+	const int workgroup_size = 32;
 
 	for (GLuint level = 0; level < octree_max_level; level++)
 	{
@@ -86,9 +86,9 @@ std::shared_ptr<Octree> OctreeBuilder::build(std::shared_ptr<VoxelList> const& v
 		voxel_list->bind(2, 3);
 
 		RenderDoc().capture([&] {
-			glDispatchCompute(glm::ceil(voxel_list->size / float(work_group_size)), 1, 1);
+			glDispatchCompute(glm::ceil(voxel_list->size / float(workgroup_size)), 1, 1);
+			glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 		});
-		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 		this->node_flag.unuse();
 
@@ -105,18 +105,19 @@ std::shared_ptr<Octree> OctreeBuilder::build(std::shared_ptr<VoxelList> const& v
 		alloc_counter.set_value(0);
 
 		RenderDoc().capture([&] {
-			glDispatchCompute(glm::ceil(count / float(work_group_size)), 1, 1);
+			glDispatchCompute(glm::ceil(count / float(workgroup_size)), 1, 1);
+			glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT);
 		});
-		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT);
 
 		this->node_alloc.unuse();
 
 		GLuint alloc_count = alloc_counter.get_value();
-		start += alloc_count * 8;
-		count = alloc_count;
-		alloc_start = start + count * 8;
+		start = alloc_start;
+		count = alloc_count * 8;
+		alloc_start = start + count;
 
-		// node_init
+		// By default all octree values are set to 0, no need to initialize.
+		/*
 		this->node_init.use();
 
 		glUniform1ui(this->node_alloc.get_uniform_location("u_start"), start);
@@ -126,24 +127,26 @@ std::shared_ptr<Octree> OctreeBuilder::build(std::shared_ptr<VoxelList> const& v
 
 		RenderDoc().capture([&] {
 			glDispatchCompute(glm::ceil(count / float(work_group_size)), 1, 1);
+			glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 		});
-		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 		this->node_init.unuse();
+		*/
 	}
 
 	// store_leaf
 	this->store_leaf.use();
 
 	glUniform1ui(this->node_flag.get_uniform_location("u_octree_max_level"), octree_max_level);
-	octree->bind(1);
 
+	octree->bind(1);
 	voxel_list->bind(2, 3);
 
+	int workgroup_count = glm::ceil(count / float(workgroup_size));
 	RenderDoc().capture([&] {
-		glDispatchCompute(glm::ceil(count / float(work_group_size)), 1, 1);
+		glDispatchCompute(workgroup_count, 1, 1);
+		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 	});
-	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 	this->store_leaf.unuse();
 

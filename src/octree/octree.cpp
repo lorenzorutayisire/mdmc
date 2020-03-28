@@ -4,7 +4,7 @@ Octree::Octree(size_t max_resolution) :
 	max_resolution(max_resolution)
 {
 	size_t capacity = Octree::size(max_resolution);
-	this->buffer.load_data(capacity, NULL, GL_DYNAMIC_DRAW);
+	this->buffer.load_data(capacity * sizeof(GLuint), NULL, GL_DYNAMIC_DRAW);
 	this->buffer.set_format(GL_R32UI);
 }
 
@@ -16,10 +16,7 @@ void Octree::bind(GLuint binding)
 size_t Octree::size(glm::uint level)
 {
 	size_t res = 0;
-	do
-	{
-		res += pow(8, level) * 8;
-		level--;
-	} while (level != 0);
+	for (int i = 0; i <= level; i++)
+		res += pow(8, i);
 	return res;
 }
