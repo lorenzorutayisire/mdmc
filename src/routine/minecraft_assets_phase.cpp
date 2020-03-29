@@ -29,6 +29,36 @@ MinecraftAssetsPhase::MinecraftAssetsPhase() :
 	camera(glm::vec3(8, 8, 8))
 {}
 
+void MinecraftAssetsPhase::toggle_view_block_octree_mode()
+{
+	this->view_block_octree = !this->view_block_octree;
+	if (this->view_block_octree && this->octree == nullptr)
+	{
+		std::cout << "Building Octree..." << std::endl;
+
+		// If the octree isn't ready yet and the user wants to see it, we need to build it.
+		auto block = this->minecraft_baked_block_pool->get_block(this->current_block_id);
+		auto voxel_list = this->minecraft_block_voxelizer.voxelize(block, 8);
+		this->octree = this->octree_builder.build(voxel_list, 3); // 2^3=8
+
+		std::cout << "Done" << std::endl;
+	}
+}
+
+void MinecraftAssetsPhase::enable(Stage& stage)
+{
+	this->glfw_cb_handler = std::make_unique<GlfwCallbackHandler>(stage.window);
+
+	this->glfw_cb_handler->sub_key_callback(GLFW_KEY_V, GLFW_PRESS, [&]() {
+		this->toggle_view_block_octree_mode();
+	});
+}
+
+void MinecraftAssetsPhase::disable(Stage& stage)
+{
+	this->glfw_cb_handler = nullptr;
+}
+
 /*
 	Tests and updates the camera movements.
 */
@@ -115,27 +145,6 @@ void MinecraftAssetsPhase::test_block_sliding_input(GLFWwindow* window, float de
 }
 
 /*
-	Tests whether the view block octree mode is being toggled.
-*/
-void MinecraftAssetsPhase::test_view_block_octree_input(GLFWwindow* window, float delta)
-{
-	bool old = this->view_block_octree;
-	this->view_block_octree = glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS;
-
-	if (this->octree == nullptr && (this->view_block_octree && !old))
-	{
-		std::cout << "Building Octree..." << std::endl;
-
-		// If the octree isn't ready yet and the user wants to see it, we need to build it.
-		auto block = this->minecraft_baked_block_pool->get_block(this->current_block_id);
-		auto voxel_list = this->minecraft_block_voxelizer.voxelize(block, 8);
-		this->octree = this->octree_builder.build(voxel_list, 3); // 2^3=8
-
-		std::cout << "Done" << std::endl;
-	}
-}
-
-/*
 	Shifts the current Minecraft block ID.
 */
 void MinecraftAssetsPhase::shift_block_id(bool forward)
@@ -153,7 +162,6 @@ void MinecraftAssetsPhase::update(Stage& stage, float delta)
 	{
 		this->test_camera_input(stage.window, delta);
 		this->test_block_sliding_input(stage.window, delta);
-		this->test_view_block_octree_input(stage.window, delta);
 	}
 }
 

@@ -20,6 +20,8 @@
 #include "octree/octree_builder.hpp"
 #include "octree/octree_tracer.hpp"
 
+#include "util/glfw_callback_handler.hpp"
+
 #include <imgui.h>
 
 class MinecraftAssetsPhase : public Phase
@@ -41,9 +43,8 @@ private:
 
 	unsigned int resolution = 1;
 
-	bool view_block_octree = false;
+	int view_block_octree = false;
 	std::shared_ptr<Octree> octree;
-	void test_view_block_octree_input(GLFWwindow* window, float delta);
 
 	std::string version = "1.15.2";
 
@@ -63,6 +64,8 @@ private:
 	std::shared_ptr<MinecraftBakedBlockPool> minecraft_baked_block_pool;
 	MinecraftRenderer minecraft_renderer;
 
+	std::unique_ptr<GlfwCallbackHandler> glfw_cb_handler;
+
 	void setup(std::string const& version);
 
 	void ui_menu_bar(unsigned int& y);
@@ -77,6 +80,11 @@ private:
 
 public:
 	MinecraftAssetsPhase();
+
+	void toggle_view_block_octree_mode();
+
+	void enable(Stage& stage) override;
+	void disable(Stage& stage) override;
 
 	void update(Stage& stage, float delta) override;
 	void render(Stage& stage) override;
