@@ -2,6 +2,8 @@
 
 layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 
+layout(binding = 2, rgb10_a2ui) uniform uimageBuffer u_voxel_position;
+
 // ======================================================================
 // Octree
 // ======================================================================
@@ -9,38 +11,31 @@ layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 layout(binding = 1, r32ui) uniform uimageBuffer u_octree;
 uniform uint u_octree_max_level;
 
+// Gets the node at the given level where the position lies.
 uint node_offset(uvec3 position, uint level)
 {
-	uint result = 0u;
+	position &= uint((1 << u_octree_max_level) - 1);
 
 	uint shift = u_octree_max_level - level;
-
-	// Masks out the bits that are outside Octree representation.
-	position &= int(pow(2, u_octree_max_level) - 1);
-
-	result |= ((position.x >> shift) & 1u) << 2;
-	result |= ((position.y >> shift) & 1u) << 1;
-	result |= ((position.z >> shift) & 1u);
-
+	uint result = 0;
+	result |= ((position.x >> shift) & 1) << 2;
+	result |= ((position.y >> shift) & 1) << 1;
+	result |= ((position.z >> shift) & 1);
 	return result;
 }
 
-int tree_lookup(uvec3 position, uint level)
+// Given the position, returns the value of the node at the level specified.
+uint tree_lookup(uvec3 position, uint level_to_reach)
 {
-	uint address = 0;
-
-	for (uint current_level = 0u; current_level < level; current_level++)
+	uint node_val = 0;
+	for (uint level = 0; level <= level_to_reach; level++)
 	{
-		uint offset = node_offset(position, current_level);
-		address = imageLoad(u_octree, int(address + offset)).r;
-
-		if ((address & 0x80000000) == 0)
-			return -1; // The given position doesn't refer to an allocated node.
-
-		address &= 0x7FFFFFFF;
+		uint node_pos = node_offset(position, level);
+		node_val = imageLoad(u_octree, int(node_val + node_pos)).r;
+		if (level < level_to_reach)
+			node_val &= 0x7FFFFFFF;
 	}
-	
-	return int(address);
+	return node_val;
 }
 
 uint vec4_to_ui32(vec4 value)
@@ -53,24 +48,18 @@ uint vec4_to_ui32(vec4 value)
 // Main
 // ======================================================================
 
-layout(binding = 2, rgb10_a2ui) uniform uimageBuffer u_voxel_position;
 layout(binding = 3, rgba8) uniform imageBuffer u_voxel_color;
 
 void main()
 {
-	uint voxel_id = gl_GlobalInvocationID.x;
-
-	if (voxel_id >= imageSize(u_voxel_position))
+	uint id = gl_GlobalInvocationID.x;
+	if (id >= imageSize(u_voxel_position))
 		return;
 
-	uvec4 position = imageLoad(u_voxel_position, int(voxel_id));
+	uvec4 voxel_pos = imageLoad(u_voxel_position, int(id));
+	vec4 voxel_col = imageLoad(u_voxel_color, int(id));
 
-	int address = tree_lookup(position.xyz, u_octree_max_level);
-	if (address < 0)
-		return; // The voxel's node isn't allocated, count the error.
-
-	vec4 color = imageLoad(u_voxel_color, int(voxel_id));
-	imageStore(u_octree, address, uvec4(vec4_to_ui32(color)));
+	uint node_val = tree_lookup(voxel_pos.xyz, u_octree_max_level - 1);
+	uint addr = node_val & 0x7FFFFFFF;
+	imageStore(u_octree, int(addr), uvec4(vec4_to_ui32(voxel_col)));
 }
-
-

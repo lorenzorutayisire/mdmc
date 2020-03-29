@@ -137,7 +137,7 @@ std::shared_ptr<Octree> OctreeBuilder::build(std::shared_ptr<VoxelList> const& v
 	// store_leaf
 	this->store_leaf.use();
 
-	glUniform1ui(this->node_flag.get_uniform_location("u_octree_max_level"), octree_max_level);
+	glUniform1ui(this->store_leaf.get_uniform_location("u_octree_max_level"), octree_max_level);
 
 	octree->bind(1);
 	voxel_list->bind(2, 3);
