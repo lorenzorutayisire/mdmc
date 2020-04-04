@@ -7,19 +7,14 @@ layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 // ======================================================================
 
 layout(binding = 1, r32ui) uniform uimageBuffer u_octree;
-uniform uint u_octree_max_level;
 
-// Gets the node at the given level where the position lies.
-uint node_offset(uvec3 position, uint level)
+uint get_index_at_level(uvec3 position, uint level)
 {
-	position &= uint(pow(2, u_octree_max_level) - 1);
-
-	uint shift = u_octree_max_level - level;
-	uint result = 0;
-	result |= ((position.x >> shift) & 1) << 2;
-	result |= ((position.y >> shift) & 1) << 1;
-	result |= ((position.z >> shift) & 1);
-	return result;
+	uint res = 0u;
+	res |= ((position.x >> level) & 1u) << 2u;
+	res |= ((position.y >> level) & 1u) << 1u;
+	res |= ((position.z >> level) & 1u);
+	return res;
 }
 
 // ======================================================================
@@ -29,7 +24,8 @@ uint node_offset(uvec3 position, uint level)
 layout(binding = 2, rgb10_a2ui) uniform uimageBuffer u_voxel_position;
 layout(binding = 3, rgba8) uniform imageBuffer u_voxel_color;
 
-uniform uint u_level;
+uniform int u_max_level;
+uniform int u_level;
 
 void main()
 {
@@ -39,14 +35,15 @@ void main()
 
 	uvec4 position = imageLoad(u_voxel_position, int(id));
 
-	uint address = 0;
-	for (uint level = 0; level <= u_level; level++)
-	{
-		uint child_off = node_offset(position.xyz, level);
+	uint addr = 0;
+	uint idx = 0;
 
-		if (level < u_level) // The current level hasn't been reached yet, jump through pointers.
-			address = imageLoad(u_octree, int(address + child_off)).r & 0x7FFFFFFF;
-		else
-			imageStore(u_octree, int(address + child_off), uvec4(0x80000000));
+	for (int level = u_max_level; level >= u_level; level--)
+	{
+		idx = get_index_at_level(position.xyz, level);
+		if (level > u_level)
+			addr = imageLoad(u_octree, int(addr + idx)).r & 0x7fffffff;
 	}
+
+	imageStore(u_octree, int(addr + idx), uvec4(0x80000000));
 }

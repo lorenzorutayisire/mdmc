@@ -17,9 +17,9 @@ void main()
 	if (id >= u_count)
 		return;
 
-	uint node_loc = u_start + id;
+	uint node_addr = u_start + id;
 
-	uint node_val = imageLoad(u_octree, int(node_loc)).r;
+	uint node_val = imageLoad(u_octree, int(node_addr)).r;
 	if ((node_val & 0x80000000) != 0) // The node has been flagged.
 	{
 		uint child_addr = atomicCounterIncrement(u_alloc_counter);
@@ -28,7 +28,7 @@ void main()
 		child_addr += u_alloc_start; // The position of the child starts from the current free index.
 		child_addr |= 0x80000000;    // Masks it.
 
-		imageStore(u_octree, int(node_loc), uvec4(child_addr));
+		imageStore(u_octree, int(node_addr), uvec4(child_addr));
 	}
 }
 

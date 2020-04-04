@@ -39,7 +39,7 @@ void MinecraftAssetsPhase::toggle_view_block_octree_mode()
 		// If the octree isn't ready yet and the user wants to see it, we need to build it.
 		auto block = this->minecraft_baked_block_pool->get_block(this->current_block_id);
 		auto voxel_list = this->minecraft_block_voxelizer.voxelize(block, 8);
-		this->octree = this->octree_builder.build(voxel_list, 3); // 2^3=8
+		this->octree = this->octree_builder.build(voxel_list, 2); // max_depth=2
 
 		std::cout << "Done" << std::endl;
 	}

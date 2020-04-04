@@ -20,6 +20,7 @@
 #include "scene/ai_scene_loader.hpp"
 
 #include "routine/scene_phase.hpp"
+#include "routine/minecraft_assets_phase.hpp"
 
 // imgui
 #include <imgui.h>
@@ -65,7 +66,7 @@ int main(int argc, char** argv)
 
 	Stage stage(window);
 
-	auto phase = std::make_shared<ScenePhase>();
+	auto phase = std::make_shared<MinecraftAssetsPhase>();
 	stage.set_phase(phase);
 
 	double prior_time = 0;

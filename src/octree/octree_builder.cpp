@@ -69,18 +69,18 @@ std::shared_ptr<Octree> OctreeBuilder::build(std::shared_ptr<VoxelList> const& v
 	AtomicCounter alloc_counter;
 
 	GLuint start = 0;
-	GLuint count = 1;
-	GLuint alloc_start = 1;
+	GLuint count = 8;
+	GLuint alloc_start = start + count;
 
 	const int workgroup_size = 32;
 
-	for (GLuint level = 0; level < octree_max_level; level++)
+	for (int level = octree_max_level; level > 0; level--)
 	{
 		// node_flag
 		this->node_flag.use();
 
-		glUniform1ui(this->node_flag.get_uniform_location("u_level"), level);
-		glUniform1ui(this->node_flag.get_uniform_location("u_octree_max_level"), octree_max_level);
+		glUniform1i(this->node_flag.get_uniform_location("u_max_level"), octree_max_level);
+		glUniform1i(this->node_flag.get_uniform_location("u_level"), level);
 
 		octree->bind(1);
 		voxel_list->bind(2, 3);
@@ -137,7 +137,7 @@ std::shared_ptr<Octree> OctreeBuilder::build(std::shared_ptr<VoxelList> const& v
 	// store_leaf
 	this->store_leaf.use();
 
-	glUniform1ui(this->store_leaf.get_uniform_location("u_octree_max_level"), octree_max_level);
+	glUniform1i(this->store_leaf.get_uniform_location("u_octree_max_level"), octree_max_level);
 
 	octree->bind(1);
 	voxel_list->bind(2, 3);

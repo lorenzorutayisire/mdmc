@@ -9,39 +9,37 @@ layout(binding = 2, rgb10_a2ui) uniform uimageBuffer u_voxel_position;
 // ======================================================================
 
 layout(binding = 1, r32ui) uniform uimageBuffer u_octree;
-uniform uint u_octree_max_level;
+uniform int u_octree_max_level;
 
-// Gets the node at the given level where the position lies.
-uint node_offset(uvec3 position, uint level)
+uint get_index_at_level(uvec3 position, uint level)
 {
-	position &= uint((1 << u_octree_max_level) - 1);
-
-	uint shift = u_octree_max_level - level;
-	uint result = 0;
-	result |= ((position.x >> shift) & 1) << 2;
-	result |= ((position.y >> shift) & 1) << 1;
-	result |= ((position.z >> shift) & 1);
-	return result;
+	uint res = 0u;
+	res |= ((position.x >> level) & 1u) << 2u;
+	res |= ((position.y >> level) & 1u) << 1u;
+	res |= ((position.z >> level) & 1u);
+	return res;
 }
 
-// Given the position, returns the value of the node at the level specified.
-uint tree_lookup(uvec3 position, uint level_to_reach)
+uint tree_lookup(uvec3 position, int level)
 {
 	uint node_val = 0;
-	for (uint level = 0; level <= level_to_reach; level++)
+	for (; level > 0; level--)
 	{
-		uint node_pos = node_offset(position, level);
-		node_val = imageLoad(u_octree, int(node_val + node_pos)).r;
-		if (level < level_to_reach)
-			node_val &= 0x7FFFFFFF;
+		node_val = imageLoad(u_octree, int(node_val)).r;
+		node_val &= 0x7FFFFFFF;
+		node_val += get_index_at_level(position, level);
 	}
 	return node_val;
 }
 
-uint vec4_to_ui32(vec4 value)
+uint pack_ui32(vec4 val)
 {
-	uvec4 tmp = floatBitsToUint(value);
-	return tmp.r << 8 * 3 | tmp.g << 8 * 2 | tmp.b << 8 | tmp.a;
+	uint res = 0;
+	res |= (uint(val.r * 255.0) & 0xff);
+	res |= (uint(val.g * 255.0) & 0xff) << 8u;
+	res |= (uint(val.b * 255.0) & 0xff) << 16u;
+	res |= (uint(val.a * 127.0) & 0x7f) << 24u;
+	return res;
 }
 
 // ======================================================================
@@ -56,10 +54,18 @@ void main()
 	if (id >= imageSize(u_voxel_position))
 		return;
 
-	uvec4 voxel_pos = imageLoad(u_voxel_position, int(id));
+	uvec3 pos = imageLoad(u_voxel_position, int(id)).rgb;
 	vec4 voxel_col = imageLoad(u_voxel_color, int(id));
 
-	uint node_val = tree_lookup(voxel_pos.xyz, u_octree_max_level - 1);
-	uint addr = node_val & 0x7FFFFFFF;
-	imageStore(u_octree, int(addr), uvec4(vec4_to_ui32(voxel_col)));
+	uint idx;
+	uint addr = 0;
+
+	for (int level = u_octree_max_level; level >= 0; level--)
+	{
+		idx = get_index_at_level(pos, level);
+		if (level > 0)
+			addr = imageLoad(u_octree, int(addr + idx)).r & 0x7fffffff;
+	}
+
+	imageStore(u_octree, int(addr + idx), uvec4(pack_ui32(voxel_col)));
 }

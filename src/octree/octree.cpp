@@ -17,6 +17,6 @@ size_t Octree::size(glm::uint level)
 {
 	size_t res = 0;
 	for (int i = 0; i <= level; i++)
-		res += pow(8, i);
+		res += pow(8, i + 1);
 	return res;
 }
