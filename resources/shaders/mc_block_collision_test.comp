@@ -139,9 +139,11 @@ void main()
 
 	if (!check_obb(voxel))
 	{
-		push_voxel(pos, vec4(1, 0, 0, 1)); // TODO: ERROR_VOXEL
 		return;
 	}
+	
+	// TODO!!!!!!!!!!!!!!!!
+	push_voxel(uvec3(1, 0, 0), vec4(1, 0, 0, 1));
 
 	uint n_elements = u_count / (6 * 4);
 	for (uint i = 0; i < n_elements; i++)
@@ -149,11 +151,13 @@ void main()
 		// The Minecraft element is the OBB2.
 		Obb obb;
 
-		vec3 h_a0 = (get_vertex_position(i, FACE_WEST, 1) - get_vertex_position(i, FACE_WEST, 0)) / 2;
-		vec3 h_a1 = (get_vertex_position(i, FACE_WEST, 2) - get_vertex_position(i, FACE_WEST, 1)) / 2;
+		vec3 v0 = get_vertex_position(i, FACE_WEST, 1);
+
+		vec3 h_a0 = (v0 - get_vertex_position(i, FACE_WEST, 0)) / 2;
+		vec3 h_a1 = (get_vertex_position(i, FACE_WEST, 2) - v0) / 2;
 		vec3 h_a2 = (get_vertex_position(i, FACE_DOWN, 2) - get_vertex_position(i, FACE_DOWN, 1)) / 2;
 
-		obb.C = h_a0 + h_a1 + h_a2; // TODO
+		obb.C = h_a0 + h_a1 + h_a2 + v0;
 
 		obb.A[0] = normalize(h_a0);
 		obb.A[1] = normalize(h_a1);
@@ -165,17 +169,15 @@ void main()
 
 		if (!check_obb(obb))
 		{
-			push_voxel(pos, vec4(0, 1, 1, 1));
 			return;
 		}
 
 		if (test_collision(voxel, obb))
 		{
-			push_voxel(pos, COLLISION_DETECTED_VOXEL);
+			// TODO!!!!!!!!!!!!!!!!
+			//push_voxel(pos, COLLISION_DETECTED_VOXEL);
 			return;
 		}
-
-		push_voxel(pos, vec4(0, 1, 0, 1));
 	}
 
 	// No collision

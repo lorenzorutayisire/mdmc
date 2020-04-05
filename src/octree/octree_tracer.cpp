@@ -1,6 +1,9 @@
 #include "octree_tracer.hpp"
 
+#include <iostream>
+
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/transform.hpp>
 
 OctreeRenderer::OctreeRenderer()
 {
@@ -24,7 +27,7 @@ OctreeRenderer::OctreeRenderer()
 }
 
 void OctreeRenderer::render(
-	glm::uvec2 screen_size,
+	glm::uvec2 const& screen,
 	glm::mat4 const& camera_projection,
 	glm::mat4 const& camera_view,
 	glm::vec3 const& camera_position,
@@ -33,14 +36,14 @@ void OctreeRenderer::render(
 {
 	this->program.use();
 
-	glUniform1i(this->program.get_uniform_location("uWidth"), screen_size.x);
-	glUniform1i(this->program.get_uniform_location("uHeight"), screen_size.y);
+	glUniform2uiv(this->program.get_uniform_location("u_screen"), 1, glm::value_ptr(screen));
 
-	glUniformMatrix4fv(this->program.get_uniform_location("uProjection"), 1, GL_FALSE, glm::value_ptr(camera_projection));
-	glUniformMatrix4fv(this->program.get_uniform_location("uView"), 1, GL_FALSE, glm::value_ptr(camera_view));
-	glUniform3fv(this->program.get_uniform_location("uPosition"), 1, glm::value_ptr(camera_position));
+	// camera
+	glUniformMatrix4fv(this->program.get_uniform_location("u_projection"), 1, GL_FALSE, glm::value_ptr(camera_projection));
+	glUniformMatrix4fv(this->program.get_uniform_location("u_view"), 1, GL_FALSE, glm::value_ptr(camera_view));
+	glUniform3fv(this->program.get_uniform_location("u_position"), 1, glm::value_ptr(camera_position));
 
-	octree->bind(3);
+	octree->bind(0);
 
 	this->screen_quad.render();
 
