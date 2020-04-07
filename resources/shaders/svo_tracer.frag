@@ -14,12 +14,6 @@ layout(binding = 0, r32ui) uniform uimageBuffer u_octree;
 
 out vec4 f_color;
 
-struct Stack {
-	uint node_address;
-	vec3 pos;
-	uint idx;
-} stack[MAX_DEPTH];
-
 void swap(inout float a, inout float b)
 {
 	float tmp = a;
@@ -99,10 +93,12 @@ void ray_generate(out Ray ray)
 	ray.direction = d;
 }
 
-vec3 ray_t(Ray ray, vec3 point)
-{
-	return (point - ray.origin) / ray.direction;
-}
+struct Stack {
+	uint node_address;
+	uint frontal_mask;
+	float t_min;
+	vec3 t_corner;
+} stack[MAX_DEPTH];
 
 bool ray_trace(Ray ray, vec3 _min, vec3 _max, out vec4 color)
 {
@@ -121,117 +117,125 @@ bool ray_trace(Ray ray, vec3 _min, vec3 _max, out vec4 color)
 	if (ray.direction.y > 0) dir_mask ^= 2u;
 	if (ray.direction.z > 0) dir_mask ^= 4u;
 	
-	float step_scale = 0.5;
-	vec3 pos = (_min + _max) * step_scale;
+	float scale = 0.5;
+	vec3 _step = scale * size;
 
-	vec3 t_center = ray_t(ray, pos);
+	vec3 center = (_min + _max) / 2;
 
-	uint idx = 0u;
-	if (t_center.x > t_min) idx ^= 1u;
-	if (t_center.y > t_min) idx ^= 2u;
-	if (t_center.z > t_min) idx ^= 4u;
+	vec3 t_center;
+	t_center = (center - ray.origin) / ray.direction;
 
-	if ((idx & 1u) == 0) pos.x += sign(ray.direction.x) * step_scale * size.x;
-	if ((idx & 2u) == 0) pos.y += sign(ray.direction.y) * step_scale * size.y;
-	if ((idx & 4u) == 0) pos.z += sign(ray.direction.z) * step_scale * size.z;
+	uint frontal_mask = 0u;
+	if (t_center.x > t_min) frontal_mask ^= 1u;
+	if (t_center.y > t_min) frontal_mask ^= 2u;
+	if (t_center.z > t_min) frontal_mask ^= 4u;
+	
+	vec3 corner = center;
+	if ((frontal_mask & 1u) == 0) corner.x += sign(ray.direction.x) * _step.x;
+	if ((frontal_mask & 2u) == 0) corner.y += sign(ray.direction.y) * _step.y;
+	if ((frontal_mask & 4u) == 0) corner.z += sign(ray.direction.z) * _step.z;
 
 	uint value = 0;
-	while (depth < 3)
-	{
-		if (depth == 0)
-		{
-			switch (idx ^ dir_mask)
-			{
-				case 0:
-					color = vec4(1, 0, 0, 1);
-					return true;
-				case 1:
-					color = vec4(0, 1, 0, 1);
-					return true;
-			}
-		}
 
-//		if (value == 0)
-//			value = imageLoad(u_octree, int(node_address + (idx ^ dir_mask))).r;
-//
-//		if ((value & 0x80000000) != 0)
-//		{
-//			color = vec4(1, 0, 0, 1);
-//			return true;
-//
-//			// PUSH
-//			stack[depth].node_address = node_address;
-//			stack[depth].pos = pos;
-//			stack[depth].idx = idx;
-//
-//			depth++;
-//			step_scale = exp2(-(depth + 1));
-//
-//			// node_address
-//			node_address = value & 0x7FFFFFFF;
-//
-//			// Move the pos to the next level.
-//			pos.x += ((slot & 1u) != 0 ? 1 : -1) * step_scale * size.x;
-//			pos.y += ((slot & 2u) != 0 ? 1 : -1) * step_scale * size.y;
-//			pos.z += ((slot & 4u) != 0 ? 1 : -1) * step_scale * size.z;
-//			
-//			// idx
-//			idx = 0u;
-//			t_center = ray_t(ray, pos);
-//			if (t_center.x > t_min) idx ^= 1u;
-//			if (t_center.y > t_min) idx ^= 2u;
-//			if (t_center.z > t_min) idx ^= 4u;
-//
-//			// value
-//			value = 0;
-//
-//			continue;
-//		}
-//		else if (value > 0)
-//			break;
+	vec3 t_corner = (corner - ray.origin) / ray.direction;
+
+	while (true)
+	{
+		if (value == 0)
+			value = imageLoad(u_octree, int(node_address + (frontal_mask ^ dir_mask))).r;
+
+		if ((value & 0x80000000) != 0)
+		{
+			// PUSH
+			stack[depth].node_address = node_address;
+			stack[depth].frontal_mask = frontal_mask;
+			stack[depth].t_min = t_min;
+			stack[depth].t_corner = t_corner;
+
+			depth++;
+			scale /= 2.0;
+			_step = size * scale;
+			
+			node_address = value & 0x7FFFFFFF;
+			t_center = t_corner - sign(ray.direction) * _step / ray.direction;
+
+			frontal_mask = 0;
+
+			if (t_center.x >= t_min)
+			{
+				frontal_mask ^= 1u;
+				t_corner.x -= sign(ray.direction.x) * _step.x / ray.direction.x;
+			}
+
+			if (t_center.y >= t_min)
+			{
+				frontal_mask ^= 2u;
+				t_corner.y -= sign(ray.direction.y) * _step.y / ray.direction.y;
+			}
+
+			if (t_center.z >= t_min)
+			{
+				frontal_mask ^= 4u;
+				t_corner.z -= sign(ray.direction.z) * _step.z / ray.direction.z;
+			}
+
+			value = 0;
+			continue;
+		}
+		else if (value > 0)
+			break;
 
 		while (true)
 		{
 			// ADVANCE
-			vec3 t_corner = ray_t(ray, pos);
 			float t_corner_max = min(min(t_corner.x, t_corner.y), t_corner.z);
+			t_min = t_corner_max;
 
-			vec3 _step = step_scale * size;
-
-			uint step_mask = 0u;
+			uint step_mask = 0;
 
 			if (t_corner.x <= t_corner_max)
-				step_mask ^= 1u,
-				pos.x += sign(ray.direction.x) * _step.x;
+			{
+				step_mask ^= 1u;
+				t_corner.x += sign(ray.direction.x) * _step.x / ray.direction.x;
+			}
 
 			if (t_corner.y <= t_corner_max)
-				step_mask ^= 2u,
-				pos.y += sign(ray.direction.y) * _step.y;
-
+			{	
+				step_mask ^= 2u;
+				t_corner.y += sign(ray.direction.y) * _step.y / ray.direction.y;
+			}
+			
 			if (t_corner.z <= t_corner_max)
-				step_mask ^= 4u,
-				pos.z += sign(ray.direction.z) * _step.z;
+			{
+				step_mask ^= 4u;
+				t_corner.z += sign(ray.direction.z) * _step.z / ray.direction.z;
+			}
 
-			idx ^= step_mask;
+			frontal_mask ^= step_mask;
 
-			if ((idx & step_mask) == 0)
+			if ((frontal_mask & step_mask) == 0)
 				break;
 
 			// POP
 			depth--;
 			if (depth < 0)
 				return false;
+			scale *= 2.0;
+			_step = size * scale;
 
-			pos = stack[depth].pos;
-			step_scale = exp2(-(depth + 1));
-			idx = stack[depth].idx;
 			node_address = stack[depth].node_address;
+			frontal_mask = stack[depth].frontal_mask;
+			t_min = stack[depth].t_min;
+			t_corner = stack[depth].t_corner;
 		}
 		
 		value = 0;
 	}
 
-	return false;
+	color = vec4(value & 0xff, (value >> 8u) & 0xff, (value >> 16u) & 0xff, (value >> 24u) & 0x7f);
+	color.rgb /= 255.0;
+	color.a /= 127.0;
+	return true;
 }
 
 void main()
