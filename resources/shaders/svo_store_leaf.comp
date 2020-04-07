@@ -54,7 +54,7 @@ void main()
 	if (id >= imageSize(u_voxel_position))
 		return;
 
-	uvec3 pos = imageLoad(u_voxel_position, int(id)).rgb;
+	uvec3 position = imageLoad(u_voxel_position, int(id)).rgb;
 	vec4 voxel_col = imageLoad(u_voxel_color, int(id));
 
 	uint idx;
@@ -62,7 +62,7 @@ void main()
 
 	for (int level = u_octree_max_level; level >= 0; level--)
 	{
-		idx = get_index_at_level(pos, level);
+		idx = get_index_at_level(position, level);
 		if (level > 0)
 			addr = imageLoad(u_octree, int(addr + idx)).r & 0x7fffffff;
 	}

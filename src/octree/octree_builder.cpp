@@ -142,7 +142,7 @@ std::shared_ptr<Octree> OctreeBuilder::build(std::shared_ptr<VoxelList> const& v
 	octree->bind(1);
 	voxel_list->bind(2, 3);
 
-	int workgroup_count = glm::ceil(count / float(workgroup_size));
+	int workgroup_count = glm::ceil(voxel_list->size / float(workgroup_size));
 	RenderDoc().capture([&] {
 		glDispatchCompute(workgroup_count, 1, 1);
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
