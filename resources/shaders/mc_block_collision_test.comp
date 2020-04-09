@@ -1,78 +1,7 @@
 ﻿#version 460
 
-// ================================================================================================
-// 3D OBB intersection
-//
-// Reference:
-// https://www.geometrictools.com/Documentation/DynamicCollisionDetection.pdf
-// ================================================================================================
-
-struct Obb
-{
-	vec3 C;     // The center of the OBB.
-	vec3 A[3];  // The normalized axes of the OBB.
-	float s[3]; // The extent scalars of the OBB.
-};
-
-// Checks whether the 3 axes of the OBB are orthogonal.
-bool check_obb(Obb obb)
-{
-	for (int i = 0; i < 3; i++)
-	{
-		float d = dot(obb.A[i], obb.A[(i + 1) % 3]);
-		if (d <= -0.1 || d >= 0.1)
-			return false;
-	}
-	return true;
-}
-
-// Checks whether the projection of the two given OBB onto the axis L overlaps.
-bool proj_overlap(vec3 L, Obb obb1, Obb obb2)
-{
-	vec3 D = obb1.C - obb2.C;
-
-	float R = abs(dot(L, D));
-	float R0 = 0, R1 = 0;
-
-	for (int i  = 0; i <= 2; i++)
-	{
-		R0 += obb1.s[i] * sign(dot(L, obb1.A[i])) * dot(L, obb1.A[i]);
-		R1 += obb2.s[i] * sign(dot(L, obb2.A[i])) * dot(L, obb2.A[i]);
-	}
-
-	return R <= R0 + R1;
-}
-
-// Tests whether the two given OBB collides.
-bool test_collision(Obb obb1, Obb obb2)
-{
-	for (int i = 0; i < 3; i++)
-	{
-		// A
-		if (proj_overlap(obb1.A[i], obb1, obb2))
-			return true;
-
-		// B
-		if (proj_overlap(obb2.A[i], obb1, obb2))
-			return true;
-
-		// AxB
-		for (int j = 0; j < 3; j++)
-		{
-			if (proj_overlap(cross(obb1.A[i], obb2.A[j]), obb1, obb2))
-				return true;
-		}
-	}
-
-	return false;
-}
-
-// ================================================================================================
-// Minecraft block pool
-// ================================================================================================
-
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
-		
+
 #define FACE_WEST  0
 #define FACE_EAST  1
 #define FACE_DOWN  2
@@ -84,19 +13,12 @@ layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
 layout(binding = 0, std430) buffer b_baked_block_pool
 {
-	float v[];
+	float minecraft_block_buffer[];
 };
 
 uniform uint u_start;
 uniform uint u_count;
 
-// Given the relative element, face and the vertex id, gets the vertex within the buffer for this block.
-vec3 get_vertex_position(uint element_id, uint face_id, uint vertex_id)
-{
-	uint vertex_loc = u_start + element_id * (6 * 4) + face_id * 4 + vertex_id;
-	uint loc = vertex_loc * VERTEX_SIZE;
-	return vec3(v[loc], v[loc + 1], v[loc + 2]);
-}
 
 // ================================================================================================
 // Minecraft block pool's voxel list
@@ -112,6 +34,136 @@ layout(binding = 3, rgba8) uniform imageBuffer u_voxel_color;
 
 uniform uint u_store;
 
+struct Obb
+{
+	vec3 C;
+	vec3 A[3];
+	float s[3];
+};
+
+vec3 get_vertex_position(uint element_id, uint face_id, uint vertex_id)
+{
+	uint vertex_location = u_start + element_id * (6 * 4) + face_id * 4 + vertex_id;
+	uint location = vertex_location * VERTEX_SIZE;
+
+	vec3 position;
+	position.x = minecraft_block_buffer[location];
+	position.y = minecraft_block_buffer[location + 1];
+	position.z = minecraft_block_buffer[location + 2];
+
+	return position;
+}
+
+// Reference:
+// https://www.geometrictools.com/Documentation/DynamicCollisionDetection.pdf
+
+bool check_obb(Obb obb)
+{
+	// Axes must be right-handed.
+	if (dot(cross(obb.A[0], obb.A[1]), obb.A[2]) <= 0)
+		return false;
+
+	for (int i = 0; i <= 2; i++)
+	{
+		// Axes must be orthonormal (orthogonal + length 1).
+		for (int j = 0; j <= 2; j++)
+		{
+			float d = dot(obb.A[i], obb.A[j]);
+			if (i != j && (d <= -0.01 || d >= 0.01))
+				return false;
+		}
+
+		float l = length(obb.A[i]);
+		if (l <= -0.99 || l >= 1.01)
+			return false;
+
+		// Extents must be > 0.
+		if (obb.s[i] <= 0)
+			return false;
+	}
+
+	return true;
+}
+
+bool generate_voxel(out Obb obb)
+{
+	vec3 side = 16.0 / vec3(gl_NumWorkGroups);
+	
+	vec3 A0 = vec3(side.x, 0, 0) / 2.0;
+	vec3 A1 = vec3(0, side.y, 0) / 2.0;
+	vec3 A2 = vec3(0, 0, side.z) / 2.0;
+	
+	obb.C = gl_WorkGroupID + A0 + A1 + A2;
+
+	obb.A[0] = normalize(A0);
+	obb.A[1] = normalize(A1);
+	obb.A[2] = normalize(A2);
+
+	obb.s[0] = length(A0);
+	obb.s[1] = length(A1);
+	obb.s[2] = length(A2);
+
+	return check_obb(obb);
+}
+
+bool generate_obb(out Obb obb, uint element_id)
+{
+	vec3 p0 = get_vertex_position(element_id, FACE_WEST, 0);
+
+	vec3 A0 = (get_vertex_position(element_id, FACE_WEST, 1) - p0) / 2.0;
+	vec3 A1 = (get_vertex_position(element_id, FACE_WEST, 3) - p0) / 2.0;
+	vec3 A2 = (get_vertex_position(element_id, FACE_DOWN, 3) - p0) / 2.0;
+
+	obb.C = p0 + A0 + A1 + A2;
+
+	obb.A[0] = normalize(A0);
+	obb.A[1] = normalize(A1);
+	obb.A[2] = normalize(A2);
+
+	obb.s[0] = length(A0);
+	obb.s[1] = length(A1);
+	obb.s[2] = length(A2);
+	
+	return check_obb(obb);
+}
+
+bool is_projection_separated(vec3 L, Obb obb1, Obb obb2)
+{
+	vec3 D = obb2.C - obb1.C;
+
+	float R = abs(dot(L, D));
+	float R0, R1;
+
+	R0 = 0;
+	R1 = 0;
+	for (int i  = 0; i <= 2; i++)
+	{
+		R0 += obb1.s[i] * sign(dot(L, obb1.A[i])) * dot(L, obb1.A[i]); // abs(...)
+		R1 += obb2.s[i] * sign(dot(L, obb2.A[i])) * dot(L, obb2.A[i]);
+	}
+
+	return R > R0 + R1;
+}
+
+bool is_colliding(Obb obb1, Obb obb2)
+{
+	for (int i = 0; i < 3; i++)
+	{
+		if (is_projection_separated(obb1.A[i], obb1, obb2))
+			return false;
+
+		if (is_projection_separated(obb2.A[i], obb1, obb2))
+			return false;
+
+		for (int j = 0; j < 3; j++)
+		{
+			if (is_projection_separated(cross(obb1.A[i], obb2.A[j]), obb1, obb2))
+				return false;
+		}
+	}
+	return true;
+}
+
 void push_voxel(uvec3 position, vec4 color)
 {
 	uint loc = atomicCounterIncrement(u_alloc);
@@ -124,61 +176,29 @@ void push_voxel(uvec3 position, vec4 color)
 
 void main()
 {
-	uvec3 pos = gl_GlobalInvocationID;
-	vec4 col;
-
-	// The voxel is the OBB1.
 	Obb voxel;
-	voxel.C = pos + vec3(0.5);
-	voxel.A = vec3[](
-		vec3(1, 0, 0),
-		vec3(0, 1, 0),
-		vec3(0, 0, 1)
-	);
-	voxel.s = float[](1, 1, 1);
-
-	if (!check_obb(voxel))
+	if (!generate_voxel(voxel))
 	{
+		// TODO: remove?
+		push_voxel(gl_WorkGroupID, vec4(1, 0, 0, 1));
 		return;
 	}
-	
-	// TODO!!!!!!!!!!!!!!!!
-	push_voxel(uvec3(1, 0, 0), vec4(1, 0, 0, 1));
 
-	uint n_elements = u_count / (6 * 4);
-	for (uint i = 0; i < n_elements; i++)
+	uint element_count = u_count / (6 * 4);
+	for (uint element_id = 0; element_id < element_count; element_id++)
 	{
-		// The Minecraft element is the OBB2.
 		Obb obb;
-
-		vec3 v0 = get_vertex_position(i, FACE_WEST, 1);
-
-		vec3 h_a0 = (v0 - get_vertex_position(i, FACE_WEST, 0)) / 2;
-		vec3 h_a1 = (get_vertex_position(i, FACE_WEST, 2) - v0) / 2;
-		vec3 h_a2 = (get_vertex_position(i, FACE_DOWN, 2) - get_vertex_position(i, FACE_DOWN, 1)) / 2;
-
-		obb.C = h_a0 + h_a1 + h_a2 + v0;
-
-		obb.A[0] = normalize(h_a0);
-		obb.A[1] = normalize(h_a1);
-		obb.A[2] = normalize(h_a2);
-
-		obb.s[0] = length(h_a0);
-		obb.s[1] = length(h_a1);
-		obb.s[2] = length(h_a2);
-
-		if (!check_obb(obb))
+		if (!generate_obb(obb, element_id))
 		{
+			// TODO: remove?
+			push_voxel(gl_WorkGroupID, vec4(0, 1, 0, 1));
 			return;
 		}
 
-		if (test_collision(voxel, obb))
+		if (is_colliding(voxel, obb))
 		{
-			// TODO!!!!!!!!!!!!!!!!
-			//push_voxel(pos, COLLISION_DETECTED_VOXEL);
+			push_voxel(gl_WorkGroupID, vec4(1, 1, 1, 1));
 			return;
 		}
 	}
-
-	// No collision
 }
