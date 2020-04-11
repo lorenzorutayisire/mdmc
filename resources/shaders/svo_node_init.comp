@@ -9,9 +9,9 @@ layout(binding = 1, r32ui) uniform uimageBuffer u_octree;
 
 void main()
 {
-	uint node_offset = gl_GlobalInvocationID.x;
-	if (node_offset >= u_count * 8)
+	uint id = gl_GlobalInvocationID.x;
+	if (id >= u_count)
 		return;
 
-	imageStore(u_octree, int(u_start + node_offset), uvec4(0));
+	imageStore(u_octree, int(u_start + id), uvec4(0));
 }

@@ -18,6 +18,10 @@ public:
 
 	void render(
 		glm::uvec2 const& screen,
+
+		glm::vec3 const& position,
+		glm::vec3 const& size,
+
 		glm::mat4 const& camera_projection,
 		glm::mat4 const& camera_view,
 		glm::vec3 const& camera_position,

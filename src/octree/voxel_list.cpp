@@ -1,5 +1,7 @@
 #include "voxel_list.hpp"
 
+#include <iostream>
+
 VoxelList::VoxelList(size_t size) :
 	size(size)
 {

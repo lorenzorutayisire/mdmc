@@ -1,6 +1,6 @@
 ﻿#version 460
 
-layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 
 #define FACE_WEST  0
 #define FACE_EAST  1
@@ -19,6 +19,7 @@ layout(binding = 0, std430) buffer b_baked_block_pool
 uniform uint u_start;
 uniform uint u_count;
 
+uniform uvec3 u_size;
 
 // ================================================================================================
 // Minecraft block pool's voxel list
@@ -85,15 +86,15 @@ bool check_obb(Obb obb)
 	return true;
 }
 
-bool generate_voxel(out Obb obb)
+bool generate_voxel(out Obb obb, uvec3 position)
 {
-	vec3 side = 16.0 / vec3(gl_NumWorkGroups);
+	vec3 side = 16.0 / vec3(u_size);
 	
 	vec3 A0 = vec3(side.x, 0, 0) / 2.0;
 	vec3 A1 = vec3(0, side.y, 0) / 2.0;
 	vec3 A2 = vec3(0, 0, side.z) / 2.0;
 	
-	obb.C = gl_WorkGroupID + A0 + A1 + A2;
+	obb.C = position + A0 + A1 + A2;
 
 	obb.A[0] = normalize(A0);
 	obb.A[1] = normalize(A1);
@@ -176,11 +177,15 @@ void push_voxel(uvec3 position, vec4 color)
 
 void main()
 {
+	uvec3 position = gl_GlobalInvocationID;
+	if (position.x >= u_size.x || position.y >= u_size.y || position.z >= u_size.z)
+		return;
+
 	Obb voxel;
-	if (!generate_voxel(voxel))
+	if (!generate_voxel(voxel, position))
 	{
 		// TODO: remove?
-		push_voxel(gl_WorkGroupID, vec4(1, 0, 0, 1));
+		push_voxel(position, vec4(1, 0, 0, 1));
 		return;
 	}
 
@@ -190,14 +195,13 @@ void main()
 		Obb obb;
 		if (!generate_obb(obb, element_id))
 		{
-			// TODO: remove?
-			push_voxel(gl_WorkGroupID, vec4(0, 1, 0, 1));
+			push_voxel(position, vec4(0, 1, 0, 1));
 			return;
 		}
 
 		if (is_colliding(voxel, obb))
 		{
-			push_voxel(gl_WorkGroupID, vec4(1, 1, 1, 1));
+			push_voxel(position, vec4(position / vec3(u_size), 1));
 			return;
 		}
 	}

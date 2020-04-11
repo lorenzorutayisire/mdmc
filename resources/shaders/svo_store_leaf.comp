@@ -2,35 +2,11 @@
 
 layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 
-layout(binding = 2, rgb10_a2ui) uniform uimageBuffer u_voxel_position;
-
-// ======================================================================
-// Octree
-// ======================================================================
-
 layout(binding = 1, r32ui) uniform uimageBuffer u_octree;
-uniform int u_octree_max_level;
+uniform int u_max_level;
 
-uint get_index_at_level(uvec3 position, uint level)
-{
-	uint res = 0u;
-	res |= ((position.x >> level) & 1u) << 2u;
-	res |= ((position.y >> level) & 1u) << 1u;
-	res |= ((position.z >> level) & 1u);
-	return res;
-}
-
-uint tree_lookup(uvec3 position, int level)
-{
-	uint node_val = 0;
-	for (; level > 0; level--)
-	{
-		node_val = imageLoad(u_octree, int(node_val)).r;
-		node_val &= 0x7FFFFFFF;
-		node_val += get_index_at_level(position, level);
-	}
-	return node_val;
-}
+layout(binding = 2, rgb10_a2ui) uniform uimageBuffer u_voxel_position;
+layout(binding = 3, rgba8) uniform imageBuffer u_voxel_color;
 
 uint pack_ui32(vec4 val)
 {
@@ -41,12 +17,6 @@ uint pack_ui32(vec4 val)
 	res |= (uint(val.a * 127.0) & 0x7f) << 24u;
 	return res;
 }
-
-// ======================================================================
-// Main
-// ======================================================================
-
-layout(binding = 3, rgba8) uniform imageBuffer u_voxel_color;
 
 void main()
 {
@@ -59,11 +29,16 @@ void main()
 
 	uint idx;
 	uint addr = 0;
-
-	for (int level = u_octree_max_level; level >= 0; level--)
+	
+	for (int level = 1; level <= u_max_level; level++)
 	{
-		idx = get_index_at_level(position, level);
-		if (level > 0)
+		uint shift = u_max_level - level;
+		idx = 0;
+		idx |= ((position.x >> shift) & 1u) << 2u;
+		idx |= ((position.y >> shift) & 1u) << 1u;
+		idx |= ((position.z >> shift) & 1u);
+
+		if (level < u_max_level)
 			addr = imageLoad(u_octree, int(addr + idx)).r & 0x7fffffff;
 	}
 

@@ -11,6 +11,8 @@ uniform mat4 u_projection;
 uniform mat4 u_view;
 
 layout(binding = 0, r32ui) uniform uimageBuffer u_octree;
+uniform vec3 u_octree_from;
+uniform vec3 u_octree_size;
 
 out vec4 f_color;
 
@@ -244,7 +246,7 @@ void main()
 	ray_generate(ray);
 
 	vec4 color;
-	bool hit = ray_trace(ray, vec3(0), vec3(16), color);
+	bool hit = ray_trace(ray, u_octree_from, u_octree_from + u_octree_size, color);
 	if (!hit)
 		discard;
 	f_color = color;

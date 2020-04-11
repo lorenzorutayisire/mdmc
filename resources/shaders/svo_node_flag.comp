@@ -8,15 +8,6 @@ layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 
 layout(binding = 1, r32ui) uniform uimageBuffer u_octree;
 
-uint get_index_at_level(uvec3 position, uint level)
-{
-	uint res = 0u;
-	res |= ((position.x >> level) & 1u) << 2u;
-	res |= ((position.y >> level) & 1u) << 1u;
-	res |= ((position.z >> level) & 1u);
-	return res;
-}
-
 // ======================================================================
 // Main
 // ======================================================================
@@ -35,13 +26,18 @@ void main()
 
 	uvec4 position = imageLoad(u_voxel_position, int(id));
 
+	uint idx;
 	uint addr = 0;
-	uint idx = 0;
 
-	for (int level = u_max_level; level >= u_level; level--)
+	for (int level = 1; level <= u_level; level++)
 	{
-		idx = get_index_at_level(position.xyz, level);
-		if (level > u_level)
+		uint shift = u_max_level - level;
+		idx = 0;
+		idx |= ((position.x >> shift) & 1u) << 2u;
+		idx |= ((position.y >> shift) & 1u) << 1u;
+		idx |= ((position.z >> shift) & 1u);
+
+		if (level < u_level)
 			addr = imageLoad(u_octree, int(addr + idx)).r & 0x7fffffff;
 	}
 

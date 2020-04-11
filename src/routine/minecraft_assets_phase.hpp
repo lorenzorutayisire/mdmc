@@ -37,7 +37,7 @@ public:
 private:
 	State state = State::SELECT_MINECRAFT_VERSION;
 
-	MinecraftBlockVoxelizer minecraft_block_voxelizer;
+	MinecraftBlockVoxelizer voxelizer;
 	OctreeBuilder octree_builder;
 	OctreeRenderer octree_tracer;
 
@@ -69,6 +69,8 @@ private:
 	void setup(std::string const& version);
 
 	void ui_menu_bar(unsigned int& y);
+
+	std::shared_ptr<Octree> voxelize(MinecraftBakedBlock const& block, unsigned int resolution);
 
 	void ui_select_minecraft_version(std::string& current_version, const std::function<void(const std::string&)>& on_load);
 	void ui_voxelization_options();

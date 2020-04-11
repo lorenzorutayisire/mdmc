@@ -140,6 +140,16 @@ void MinecraftModelElement::from_json(const rapidjson::Value::Object& json)
 	auto to = json["to"].GetArray();
 	vec3_from_json(this->to, to);
 
+	auto old_to = this->to;
+
+	// If a dimension is null adds a very small quantity. This way we always have a OBB.
+	if (this->to.x - this->from.x == 0) this->to.x = this->from.x + 0.01f;
+	if (this->to.y - this->from.y == 0) this->to.y = this->from.y + 0.01f;
+	if (this->to.z - this->from.z == 0) this->to.z = this->from.z + 0.01f;
+
+	if (this->to != old_to)
+		std::cerr << "The block was < 3D. Add a non-null value to make it an OBB." << std::endl;
+
 	if (json.HasMember("rotation"))
 	{
 		auto rotation = json["rotation"].GetObject();
@@ -160,8 +170,7 @@ void MinecraftModelElement::from_json(const rapidjson::Value::Object& json)
 		this->face_by_position.insert(std::make_pair(face.orientation, face));
 	}
 
-	// If the element adds faces but not with all orientations, here we add them.
-	// This is done to ensure baking consistency.
+	// If the model hasn't got all faces, add the missing ones.
 	if (this->face_by_position.size() > 0 && this->face_by_position.size() < 6)
 	{
 		for (auto& member : orientation_by_name)

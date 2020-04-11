@@ -16,8 +16,10 @@ private:
 		node_init,
 		store_leaf;
 
+	void clear(std::shared_ptr<Octree> const& octree, unsigned int start, unsigned int count);
+
 public:
 	OctreeBuilder();
 
-	std::shared_ptr<Octree> build(std::shared_ptr<VoxelList> const& voxel_list, size_t octree_max_resolution);
+	void build(std::shared_ptr<VoxelList> const& voxel_list, std::shared_ptr<Octree> const& octree);
 };

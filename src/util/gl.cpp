@@ -145,6 +145,7 @@ TextureBuffer::~TextureBuffer()
 void TextureBuffer::load_data(GLsizei size, const void* data, GLenum usage)
 {
 	glBindBuffer(GL_TEXTURE_BUFFER, this->buffer_name);
+
 	glBufferData(GL_TEXTURE_BUFFER, size, data, usage);
 
 	glBindBuffer(GL_TEXTURE_BUFFER, 0);

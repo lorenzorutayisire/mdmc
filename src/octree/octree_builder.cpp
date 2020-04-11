@@ -7,6 +7,8 @@
 
 #include "util/render_doc.hpp"
 
+#define WORKGROUP_SIZE 32
+
 // ================================================================================================
 // OctreeBuilder
 // ================================================================================================
@@ -62,37 +64,50 @@ OctreeBuilder::OctreeBuilder()
 	}
 }
 
-std::shared_ptr<Octree> OctreeBuilder::build(std::shared_ptr<VoxelList> const& voxel_list, size_t octree_max_level)
+void OctreeBuilder::clear(std::shared_ptr<Octree> const& octree, unsigned int start, unsigned int count)
 {
-	auto octree = std::make_shared<Octree>(octree_max_level);
+	this->node_init.use();
 
+	glUniform1ui(this->node_init.get_uniform_location("u_start"), start);
+	glUniform1ui(this->node_init.get_uniform_location("u_count"), count);
+
+	octree->bind(1);
+
+	RenderDoc().capture([&] {
+		glDispatchCompute(glm::ceil(count / float(WORKGROUP_SIZE)), 1, 1);
+		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+	});
+
+	this->node_init.unuse();
+}
+
+void OctreeBuilder::build(std::shared_ptr<VoxelList> const& voxel_list, std::shared_ptr<Octree> const& octree)
+{
 	AtomicCounter alloc_counter;
 
-	GLuint start = 0;
-	GLuint count = 8;
-	GLuint alloc_start = start + count;
+	unsigned int start = 0, count = 8;
+	unsigned int alloc_start = start + count;
 
-	const int workgroup_size = 32;
+	// node init
+	this->clear(octree, start, count);
 
-	for (int level = octree_max_level; level > 0; level--)
+	for (unsigned int level = 1; level < octree->resolution; level++)
 	{
-		// node_flag
+		// node flag
 		this->node_flag.use();
 
-		glUniform1i(this->node_flag.get_uniform_location("u_max_level"), octree_max_level);
+		glUniform1i(this->node_flag.get_uniform_location("u_max_level"), octree->resolution);
 		glUniform1i(this->node_flag.get_uniform_location("u_level"), level);
 
 		octree->bind(1);
 		voxel_list->bind(2, 3);
 
-		RenderDoc().capture([&] {
-			glDispatchCompute(glm::ceil(voxel_list->size / float(workgroup_size)), 1, 1);
-			glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-		});
+		glDispatchCompute(glm::ceil(voxel_list->size / float(WORKGROUP_SIZE)), 1, 1);
+		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 		this->node_flag.unuse();
 
-		// node_alloc
+		// node alloc
 		this->node_alloc.use();
 
 		glUniform1ui(this->node_alloc.get_uniform_location("u_start"), start);
@@ -105,7 +120,7 @@ std::shared_ptr<Octree> OctreeBuilder::build(std::shared_ptr<VoxelList> const& v
 		alloc_counter.set_value(0);
 
 		RenderDoc().capture([&] {
-			glDispatchCompute(glm::ceil(count / float(workgroup_size)), 1, 1);
+			glDispatchCompute(glm::ceil(count / float(WORKGROUP_SIZE)), 1, 1);
 			glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT);
 		});
 
@@ -116,39 +131,23 @@ std::shared_ptr<Octree> OctreeBuilder::build(std::shared_ptr<VoxelList> const& v
 		count = alloc_count * 8;
 		alloc_start = start + count;
 
-		// By default all octree values are set to 0, no need to initialize.
-		/*
-		this->node_init.use();
-
-		glUniform1ui(this->node_alloc.get_uniform_location("u_start"), start);
-		glUniform1ui(this->node_alloc.get_uniform_location("u_count"), count);
-
-		octree->bind(1);
-
-		RenderDoc().capture([&] {
-			glDispatchCompute(glm::ceil(count / float(work_group_size)), 1, 1);
-			glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-		});
-
-		this->node_init.unuse();
-		*/
+		// node init
+		this->clear(octree, start, count);
 	}
 
-	// store_leaf
+	// store leaf
 	this->store_leaf.use();
 
-	glUniform1i(this->store_leaf.get_uniform_location("u_octree_max_level"), octree_max_level);
+	glUniform1i(this->store_leaf.get_uniform_location("u_max_level"), octree->resolution);
 
 	octree->bind(1);
 	voxel_list->bind(2, 3);
 
-	int workgroup_count = glm::ceil(voxel_list->size / float(workgroup_size));
+	int workgroup_count = glm::ceil(voxel_list->size / float(WORKGROUP_SIZE));
 	RenderDoc().capture([&] {
 		glDispatchCompute(workgroup_count, 1, 1);
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 	});
 
 	this->store_leaf.unuse();
-
-	return octree;
 }

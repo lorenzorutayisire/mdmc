@@ -12,6 +12,9 @@
 
 #include "minecraft/assets/minecraft_assets.hpp"
 
+using namespace std::chrono;
+using ms = std::chrono::milliseconds;
+
 namespace fs = std::filesystem;
 
 glm::mat4 get_projection()
@@ -29,19 +32,37 @@ MinecraftAssetsPhase::MinecraftAssetsPhase() :
 	camera(glm::vec3(8, 8, 8))
 {}
 
+std::shared_ptr<Octree> MinecraftAssetsPhase::voxelize(MinecraftBakedBlock const& block, unsigned int resolution)
+{
+	size_t side = glm::exp2(resolution);
+
+	std::cout << "Voxelization process started..." << std::endl;
+	std::cout << "Vertices pool: ["  << block.start_at << "," << block.count << "]" << std::endl;
+	std::cout << "Resolution: "		 << resolution     << std::endl;
+	std::cout << "Side: "			 << side           << std::endl;
+
+	ms start_at = duration_cast<ms>(system_clock::now().time_since_epoch());
+
+	this->octree = std::make_shared<Octree>(resolution);
+	std::shared_ptr<VoxelList> voxel_list = this->voxelizer.voxelize(block, side);
+	this->octree_builder.build(voxel_list, octree);
+
+	ms end_at = duration_cast<ms>(system_clock::now().time_since_epoch());
+
+	std::cout << "Generated voxels: "	   << voxel_list->size << std::endl;
+	std::cout << "Generated octree size: " << octree->capacity / 1024 << " KB" << std::endl;
+
+	std::cout << "Done in " << (end_at - start_at).count() << "ms" << std::endl;
+
+	return octree;
+}
+
 void MinecraftAssetsPhase::toggle_view_block_octree_mode()
 {
 	this->view_block_octree = !this->view_block_octree;
 	if (this->view_block_octree && this->octree == nullptr)
 	{
-		std::cout << "Building Octree..." << std::endl;
-
-		// If the octree isn't ready yet and the user wants to see it, we need to build it.
-		auto block = this->minecraft_baked_block_pool->get_block(this->current_block_id);
-		auto voxel_list = this->minecraft_block_voxelizer.voxelize(block, 8);
-		this->octree = this->octree_builder.build(voxel_list, 2); // max_depth=2
-
-		std::cout << "Done" << std::endl;
+		this->octree = this->voxelize(this->minecraft_baked_block_pool->get_block(this->current_block_id), 5);
 	}
 }
 
@@ -370,6 +391,9 @@ void MinecraftAssetsPhase::render(Stage& stage)
 		
 		this->octree_tracer.render(
 			glm::uvec2(width, height),
+
+			glm::vec3(0), glm::vec3(16),
+
 			get_projection(),
 			this->camera.get_matrix(),
 			this->camera.get_position(),
