@@ -94,7 +94,8 @@ bool generate_voxel(out Obb obb, uvec3 position)
 	vec3 A1 = vec3(0, side.y, 0) / 2.0;
 	vec3 A2 = vec3(0, 0, side.z) / 2.0;
 	
-	obb.C = position + A0 + A1 + A2;
+	vec3 _min = position * (vec3(16) / u_size);
+	obb.C = _min + A0 + A1 + A2;
 
 	obb.A[0] = normalize(A0);
 	obb.A[1] = normalize(A1);
@@ -180,7 +181,7 @@ void main()
 	uvec3 position = gl_GlobalInvocationID;
 	if (position.x >= u_size.x || position.y >= u_size.y || position.z >= u_size.z)
 		return;
-
+	
 	Obb voxel;
 	if (!generate_voxel(voxel, position))
 	{
