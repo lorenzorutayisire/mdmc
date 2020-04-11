@@ -20,21 +20,19 @@ std::shared_ptr<VoxelList> MinecraftBlockVoxelizer::voxelize(MinecraftBakedBlock
 {
 	this->program.use();
 
-	glUniform1ui(this->program.get_uniform_location("u_start"), block.start_at);
-	glUniform1ui(this->program.get_uniform_location("u_count"), block.count);
+	glUniform1ui (this->program.get_uniform_location("u_start"), block.start_at);
+	glUniform1ui (this->program.get_uniform_location("u_count"), block.count);
+	glUniform3uiv(this->program.get_uniform_location("u_size"), 1, glm::value_ptr(glm::uvec3(side)));
 
 	AtomicCounter counter;
 	counter.bind(1);
-
-	glUniform3uiv(this->program.get_uniform_location("u_size"), 1, glm::value_ptr(glm::uvec3(side)));
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, block.pool->vbo);
 
 	glm::uvec3 workgroup_count = glm::ceil(glm::vec3(side) / glm::vec3(8));
-	std::cout << "Dispatching " << workgroup_count.x << "^3 = " << glm::pow(workgroup_count.x, 3) << " workgroups..." << std::endl;
 
 	// Count
 	glUniform1ui(this->program.get_uniform_location("u_store"), 0);
 	counter.set_value(0);
-
 
 	RenderDoc().capture([&] {
 		glDispatchCompute(workgroup_count.x, workgroup_count.y, workgroup_count.z);
@@ -49,7 +47,6 @@ std::shared_ptr<VoxelList> MinecraftBlockVoxelizer::voxelize(MinecraftBakedBlock
 	voxel_list->bind(2, 3);
 
 	counter.set_value(0);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, block.pool->vbo);
 
 	RenderDoc().capture([&] {
 		glDispatchCompute(workgroup_count.x, workgroup_count.y, workgroup_count.z);
