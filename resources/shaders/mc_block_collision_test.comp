@@ -110,11 +110,11 @@ bool generate_voxel(out Obb obb, uvec3 position)
 
 bool generate_obb(out Obb obb, uint element_id)
 {
-	vec3 p0 = get_vertex_position(element_id, FACE_WEST, 0);
+	vec3 p0 = get_vertex_position(element_id, FACE_WEST, 1);
 
-	vec3 A0 = (get_vertex_position(element_id, FACE_WEST, 1) - p0) / 2.0;
-	vec3 A1 = (get_vertex_position(element_id, FACE_WEST, 3) - p0) / 2.0;
-	vec3 A2 = (get_vertex_position(element_id, FACE_DOWN, 3) - p0) / 2.0;
+	vec3 A0 = (get_vertex_position(element_id, FACE_WEST, 0) - p0) / 2.0;
+	vec3 A1 = (get_vertex_position(element_id, FACE_WEST, 2) - p0) / 2.0;
+	vec3 A2 = (get_vertex_position(element_id, FACE_DOWN, 2) - p0) / 2.0;
 
 	obb.C = p0 + A0 + A1 + A2;
 

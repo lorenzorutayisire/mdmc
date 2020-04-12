@@ -67,6 +67,44 @@ const Atlas::Texture& MinecraftModelElementFace::get_texture(
 	return atlas->texture_by_name.at(texture);
 }
 
+float vertices[] = {
+	// west
+	0, 0, 0, 0, 1, // 1
+	0, 0, 1, 1, 1, // 0
+	0, 1, 1, 1, 0, // 2
+	0, 1, 0, 0, 0,
+
+	// east
+	1, 0, 0, 0, 1,
+	1, 0, 1, 1, 1,
+	1, 1, 1, 1, 0,
+	1, 1, 0, 0, 0,
+
+	// down
+	0, 0, 0, 0, 0,
+	1, 0, 0, 1, 0,
+	1, 0, 1, 1, 1,
+	0, 0, 1, 0, 1, // 3
+
+	// up
+	0, 1, 0, 0, 0,
+	1, 1, 0, 1, 0,
+	1, 1, 1, 1, 1,
+	0, 1, 1, 0, 1,
+
+	// back
+	0, 0, 0, 0, 1,
+	1, 0, 0, 1, 1,
+	1, 1, 0, 1, 0,
+	0, 1, 0, 0, 0,
+
+	// front
+	0, 0, 1, 0, 1,
+	1, 0, 1, 1, 1,
+	1, 1, 1, 1, 0,
+	0, 1, 1, 0, 0,
+};
+
 size_t MinecraftModelElementFace::bake(
 	std::shared_ptr<MinecraftAssets const> const& assets,
 	std::unordered_map<std::string, std::string> const& texture_by_variable,
@@ -74,23 +112,17 @@ size_t MinecraftModelElementFace::bake(
 	std::vector<float>& buffer
 ) const
 {
-	int axis = static_cast<int>(this->orientation) >> 1;
-	int right = static_cast<int>(this->orientation) & 1;
-
-	const int gray_sequence[]{0b00, 0b01, 0b11, 0b10};
-	for (int i = 0; i < 4; i++)
+	for (int vertex = 0; vertex < 4; vertex++)
 	{
-		int gray_code = gray_sequence[i];
-		int mb = gray_code >> 1;
-		int lb = gray_code & 1;
-
+		unsigned int index;
+		
 		// Position
-		glm::vec3 position;
+		index = (static_cast<unsigned int>(this->orientation) * 4 + vertex) * 5;
 
-		int coord;
-		coord = (axis + 0) % 3; position[coord] = right;
-		coord = (axis + 1) % 3; position[coord] = lb;
-		coord = (axis + 2) % 3; position[coord] = mb;
+		glm::vec3 position;
+		position.x = vertices[index];
+		position.y = vertices[index + 1];
+		position.z = vertices[index + 2];
 
 		position = transform * glm::vec4(position, 1);
 
@@ -99,16 +131,22 @@ size_t MinecraftModelElementFace::bake(
 		buffer.push_back(position.z);
 
 		// UV
-		auto texture = this->get_texture(assets, texture_by_variable);
-		auto texture_from = texture.from + this->from_uv;
-		auto texture_size = this->to_uv - this->from_uv;
-		
-		auto& rot_gray_code = gray_sequence[(i + (this->rotation / 90) % 4) % 4];
-		int rot_mb = rot_gray_code >> 1;
-		int rot_lb = rot_gray_code & 1;
+		unsigned int uv_vertex = (vertex + this->rotation / 90) % 4;
+		index = (static_cast<unsigned int>(this->orientation) * 4 + uv_vertex) * 5;
 
-		buffer.push_back(texture_from.x + rot_lb * texture_size.x);
-		buffer.push_back(texture_from.y + rot_mb * texture_size.y);
+		auto texture = this->get_texture(assets, texture_by_variable);
+
+		glm::vec2 uv;
+		uv.x = vertices[index + 3];
+		uv.y = vertices[index + 4];
+
+		glm::vec2 sprite_size = this->to_uv - this->from_uv;
+
+		uv *= sprite_size;
+		uv += texture.from + this->from_uv;
+
+		buffer.push_back(uv.x);
+		buffer.push_back(uv.y);
 
 		// Tint index
 		buffer.push_back(this->tint_index);

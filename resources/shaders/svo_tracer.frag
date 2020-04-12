@@ -108,6 +108,8 @@ bool ray_trace(Ray ray, vec3 _min, vec3 _max, out vec4 color)
 	if (!ray_intersect(ray.origin, ray.direction, _min, _max, t_min, t_max))
 		return false;
 
+	t_min = max(t_min, 0);
+
 	uint node_address = 0;
 
 	int depth = 0;
