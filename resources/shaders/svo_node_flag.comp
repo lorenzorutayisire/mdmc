@@ -33,9 +33,9 @@ void main()
 	{
 		uint shift = u_max_level - level;
 		idx = 0;
-		idx |= ((position.x >> shift) & 1u) << 2u;
+		idx |= ((position.x >> shift) & 1u);
 		idx |= ((position.y >> shift) & 1u) << 1u;
-		idx |= ((position.z >> shift) & 1u);
+		idx |= ((position.z >> shift) & 1u) << 2u;
 
 		if (level < u_level)
 			addr = imageLoad(u_octree, int(addr + idx)).r & 0x7fffffff;
