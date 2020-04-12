@@ -2,7 +2,7 @@
 
 #define EPS 3.552713678800501e-15
 
-#define MAX_DEPTH 3
+#define MAX_DEPTH 32
 
 uniform uvec2 u_screen;
 
