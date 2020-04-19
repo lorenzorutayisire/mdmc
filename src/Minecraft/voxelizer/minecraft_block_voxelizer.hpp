@@ -11,5 +11,5 @@ private:
 public:
 	MinecraftBlockVoxelizer();
 
-	std::shared_ptr<VoxelList> voxelize(MinecraftBakedBlock const& block, unsigned int resolution);
+	std::shared_ptr<VoxelList> voxelize(MinecraftBakedBlock const& block, GLuint atlas, unsigned int resolution);
 };

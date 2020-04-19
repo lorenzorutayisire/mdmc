@@ -44,7 +44,7 @@ std::shared_ptr<Octree> MinecraftAssetsPhase::voxelize(MinecraftBakedBlock const
 	ms start_at = duration_cast<ms>(system_clock::now().time_since_epoch());
 
 	this->octree = std::make_shared<Octree>(resolution);
-	std::shared_ptr<VoxelList> voxel_list = this->voxelizer.voxelize(block, side);
+	std::shared_ptr<VoxelList> voxel_list = this->voxelizer.voxelize(block, this->context->get_atlas_texture(), side);
 	this->octree_builder.build(voxel_list, octree);
 
 	ms end_at = duration_cast<ms>(system_clock::now().time_since_epoch());

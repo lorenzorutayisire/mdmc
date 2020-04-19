@@ -16,13 +16,15 @@ MinecraftBlockVoxelizer::MinecraftBlockVoxelizer()
 	this->program.link();
 }
 
-std::shared_ptr<VoxelList> MinecraftBlockVoxelizer::voxelize(MinecraftBakedBlock const& block, unsigned int side)
+std::shared_ptr<VoxelList> MinecraftBlockVoxelizer::voxelize(MinecraftBakedBlock const& block, GLuint atlas, unsigned int side)
 {
 	this->program.use();
 
 	glUniform1ui (this->program.get_uniform_location("u_start"), block.start_at);
 	glUniform1ui (this->program.get_uniform_location("u_count"), block.count);
 	glUniform3uiv(this->program.get_uniform_location("u_size"), 1, glm::value_ptr(glm::uvec3(side)));
+
+	glBindTexture(GL_TEXTURE_2D, atlas);
 
 	AtomicCounter counter;
 	counter.bind(1);
