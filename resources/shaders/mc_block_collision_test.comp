@@ -9,11 +9,11 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 #define FACE_SOUTH 4
 #define FACE_NORTH 5
 
-#define VERTEX_SIZE (3 + 2 + 1)
+#define VERTEX_SIZE (3 + 2 + 2 + 1)
 
 layout(binding = 0, std430) buffer b_baked_block_pool
 {
-	float minecraft_block_buffer[];
+	float vertex_buffer[];
 };
 
 uniform uint u_start;
@@ -27,11 +27,14 @@ uniform uvec3 u_size;
 
 #define COLLISION_DETECTED_VOXEL vec4(1)
 #define ERROR_VOXEL              vec4(0)
+#define EPSILON 3.552713678800501e-15
 
 layout(binding = 1) uniform atomic_uint u_alloc;
 
 layout(binding = 2, rgb10_a2ui) uniform uimageBuffer u_voxel_position;
 layout(binding = 3, rgba8) uniform imageBuffer u_voxel_color;
+
+uniform sampler2D u_texture2d;
 
 uniform uint u_store;
 
@@ -42,27 +45,61 @@ struct Obb
 	float s[3];
 };
 
+struct Vertex
+{
+	vec3 position;
+	vec2 tile;
+	vec2 uv;
+	float tint;
+};
+
+void vertex_at(uint element_id, uint face_id, uint vertex_id, out Vertex vertex)
+{
+	uint location = (u_start + element_id * (6 * 4) + face_id * 4 + vertex_id) * VERTEX_SIZE;
+
+	// Position
+	vertex.position.x = vertex_buffer[location + 0];
+	vertex.position.y = vertex_buffer[location + 1];
+	vertex.position.z = vertex_buffer[location + 2];
+
+	// Tile
+	vertex.tile.x = vertex_buffer[location + 3];
+	vertex.tile.y = vertex_buffer[location + 4];
+
+	// UV
+	vertex.uv.x = vertex_buffer[location + 5];
+	vertex.uv.y = vertex_buffer[location + 6];
+	
+	// Tint
+	vertex.tint = vertex_buffer[location + 7];
+}
+
 vec3 get_vertex_position(uint element_id, uint face_id, uint vertex_id)
 {
-	uint vertex_location = u_start + element_id * (6 * 4) + face_id * 4 + vertex_id;
-	uint location = vertex_location * VERTEX_SIZE;
-
-	vec3 position;
-	position.x = minecraft_block_buffer[location];
-	position.y = minecraft_block_buffer[location + 1];
-	position.z = minecraft_block_buffer[location + 2];
-
-	return position;
+	Vertex v;
+	vertex_at(element_id, face_id, vertex_id, v);
+	return v.position;
 }
 
 // Reference:
 // https://www.geometrictools.com/Documentation/DynamicCollisionDetection.pdf
 
-bool check_obb(Obb obb)
+vec4 _3BIT_DEBUG[] = vec4[](
+	vec4(0, 0, 0, 1),
+	vec4(0, 0, 1, 1),
+	vec4(0, 1, 0, 1),
+	vec4(0, 1, 1, 1),
+	vec4(1, 0, 0, 1),
+	vec4(1, 0, 1, 1),
+	vec4(1, 1, 0, 1),
+	vec4(1, 1, 1, 1)
+);
+
+uint check_obb(Obb obb)
 {
 	// Axes must be right-handed.
 	if (dot(cross(obb.A[0], obb.A[1]), obb.A[2]) <= 0)
-		return false;
+		return 1;
 
 	for (int i = 0; i <= 2; i++)
 	{
@@ -71,22 +108,22 @@ bool check_obb(Obb obb)
 		{
 			float d = dot(obb.A[i], obb.A[j]);
 			if (i != j && (d <= -0.01 || d >= 0.01))
-				return false;
+				return 2;
 		}
 
 		float l = length(obb.A[i]);
 		if (l <= -0.99 || l >= 1.01)
-			return false;
+			return 3;
 
 		// Extents must be > 0.
 		if (obb.s[i] <= 0)
-			return false;
+			return 4;
 	}
 
-	return true;
+	return 0;
 }
 
-bool generate_voxel(out Obb obb, uvec3 position)
+uint generate_voxel(out Obb obb, uvec3 position)
 {
 	vec3 side = 16.0 / vec3(u_size);
 	
@@ -108,13 +145,13 @@ bool generate_voxel(out Obb obb, uvec3 position)
 	return check_obb(obb);
 }
 
-bool generate_obb(out Obb obb, uint element_id)
+uint generate_obb(out Obb obb, uint element_id)
 {
-	vec3 p0 = get_vertex_position(element_id, FACE_WEST, 1);
+	vec3 p0 = get_vertex_position(element_id, FACE_WEST, 0);
 
-	vec3 A0 = (get_vertex_position(element_id, FACE_WEST, 0) - p0) / 2.0;
-	vec3 A1 = (get_vertex_position(element_id, FACE_WEST, 2) - p0) / 2.0;
-	vec3 A2 = (get_vertex_position(element_id, FACE_DOWN, 2) - p0) / 2.0;
+	vec3 A0 = (get_vertex_position(element_id, FACE_WEST, 1) - p0) / 2.0;
+	vec3 A1 = (get_vertex_position(element_id, FACE_DOWN, 1) - p0) / 2.0;
+	vec3 A2 = (get_vertex_position(element_id, FACE_WEST, 3) - p0) / 2.0;
 
 	obb.C = p0 + A0 + A1 + A2;
 
@@ -176,17 +213,73 @@ void push_voxel(uvec3 position, vec4 color)
 	}
 }
 
+void approximate_zero(inout vec3 v)
+{
+	v.x = abs(v.x) > EPSILON ? v.x : (v.x >= 0 ? EPSILON : -EPSILON);
+	v.y = abs(v.y) > EPSILON ? v.y : (v.y >= 0 ? EPSILON : -EPSILON);
+	v.z = abs(v.z) > EPSILON ? v.z : (v.z >= 0 ? EPSILON : -EPSILON);
+}
+
+vec4 average_color(vec3 point, uint element_id)
+{
+	vec4 color = vec4(0);
+	uint cnt = 0;
+
+	for (uint face_id = 0; face_id < 6; face_id++)
+	{
+		Vertex v0, v1, v2;
+		vertex_at(element_id, face_id, 2, v0);
+		vertex_at(element_id, face_id, 1, v1);
+		vertex_at(element_id, face_id, 3, v2);
+		
+		// Create the plane referring to the current face and project the point on it.
+		// Reference: https://stackoverflow.com/questions/9605556/how-to-project-a-point-onto-a-plane-in-3d
+		vec3 d1 = v1.position - v0.position;
+		vec3 d2 = v2.position - v0.position;
+
+		approximate_zero(d1);
+		approximate_zero(d2);
+
+		vec3 v = point - v0.position;
+		vec3 n = normalize(cross(d1, d2));
+		vec3 proj = point - dot(v, n) * n;
+
+		// Retrieve the plane origin's relative coordinates (also the uv).
+		vec3 op = proj - v0.position;
+		float d = d1.x * d2.y - d2.x * d1.y;
+
+		vec2 uv;
+		uv.x = (op.x * d2.y - d2.x * op.y) / d;
+		uv.y = (op.y * d1.x - d1.y * op.x) / d;
+
+		uv += v0.uv;
+		if (uv.x < v0.uv.x || uv.y < v0.uv.y || uv.x > v2.uv.x || uv.y > v2.uv.y)
+			continue;
+
+		uv += v0.tile;
+		uv /= textureSize(u_texture2d, 0);
+		
+		vec4 texel = (v0.tint != 0 ? vec4(0, 1, 0, 1) : vec4(1)) *  texture(u_texture2d, uv);
+		return texel;
+	}
+
+	return cnt > 0 ? sqrt(color / cnt) : vec4(0, 0, 0, 1);
+}
+
 void main()
 {
+	uint result;
+
 	uvec3 position = gl_GlobalInvocationID;
 	if (position.x >= u_size.x || position.y >= u_size.y || position.z >= u_size.z)
 		return;
 	
 	Obb voxel;
-	if (!generate_voxel(voxel, position))
+	result = generate_voxel(voxel, position);
+
+	if (result != 0)
 	{
-		// TODO: remove?
-		push_voxel(position, vec4(1, 0, 0, 1));
+		push_voxel(position, _3BIT_DEBUG[result]);
 		return;
 	}
 
@@ -194,15 +287,16 @@ void main()
 	for (uint element_id = 0; element_id < element_count; element_id++)
 	{
 		Obb obb;
-		if (!generate_obb(obb, element_id))
+		result = generate_obb(obb, element_id);
+		if (result != 0)
 		{
-			push_voxel(position, vec4(0, 1, 0, 1));
+			push_voxel(position, _3BIT_DEBUG[result]);
 			return;
 		}
 
 		if (is_colliding(voxel, obb))
 		{
-			push_voxel(position, vec4(position / vec3(u_size), 1));
+			push_voxel(position, average_color(voxel.C, element_id));
 			return;
 		}
 	}

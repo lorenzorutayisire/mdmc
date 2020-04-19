@@ -8,6 +8,8 @@
 
 #include "minecraft_assets.hpp"
 
+#define VERTEX_SIZE (3 + 2 + 2 + 1)
+
 void ivec3_from_json(glm::ivec3& ivec3, const rapidjson::Value::Array& json)
 {
 	for (size_t i = 0; i < 3; i++)
@@ -68,41 +70,41 @@ const Atlas::Texture& MinecraftModelElementFace::get_texture(
 }
 
 float vertices[] = {
-	// west
-	0, 0, 0, 0, 1, // 1
-	0, 0, 1, 1, 1, // 0
-	0, 1, 1, 1, 0, // 2
-	0, 1, 0, 0, 0,
+	// WEST
+	0, 0, 0,	1, 1, // 0
+	0, 0, 1,	0, 1, // 1
+	0, 1, 1,	0, 0,
+	0, 1, 0,	1, 0, // 3
 
-	// east
-	1, 0, 0, 0, 1,
-	1, 0, 1, 1, 1,
-	1, 1, 1, 1, 0,
-	1, 1, 0, 0, 0,
+	// EAST
+	1, 0, 0,	1, 1,
+	1, 1, 0,	1, 0,
+	1, 1, 1,	0, 0,
+	1, 0, 1,	0, 1,
 
-	// down
-	0, 0, 0, 0, 0,
-	1, 0, 0, 1, 0,
-	1, 0, 1, 1, 1,
-	0, 0, 1, 0, 1, // 3
+	// DOWN
+	0, 0, 0,	1, 1,
+	1, 0, 0,	0, 1, // 2
+	1, 0, 1,	0, 0,
+	0, 0, 1,	1, 0,
 
-	// up
-	0, 1, 0, 0, 0,
-	1, 1, 0, 1, 0,
-	1, 1, 1, 1, 1,
-	0, 1, 1, 0, 1,
+	// UP
+	0, 1, 0,	1, 1,
+	0, 1, 1,	1, 0,
+	1, 1, 1,	0, 0,
+	1, 1, 0,	0, 1,
 
-	// back
-	0, 0, 0, 0, 1,
-	1, 0, 0, 1, 1,
-	1, 1, 0, 1, 0,
-	0, 1, 0, 0, 0,
+	// BACK
+	0, 0, 0,	1, 1,
+	0, 1, 0,	1, 0,
+	1, 1, 0,	0, 0,
+	1, 0, 0,	0, 1,
 
-	// front
-	0, 0, 1, 0, 1,
-	1, 0, 1, 1, 1,
-	1, 1, 1, 1, 0,
-	0, 1, 1, 0, 0,
+	// FRONT
+	0, 0, 1,	1, 1,
+	1, 0, 1,	0, 1,
+	1, 1, 1,	0, 0,
+	0, 1, 1,	1, 0,
 };
 
 size_t MinecraftModelElementFace::bake(
@@ -130,25 +132,26 @@ size_t MinecraftModelElementFace::bake(
 		buffer.push_back(position.y);
 		buffer.push_back(position.z);
 
+		// Tile
+		auto texture = this->get_texture(assets, texture_by_variable);
+		buffer.push_back(texture.from.x);
+		buffer.push_back(texture.from.y);
+
 		// UV
 		unsigned int uv_vertex = (vertex + this->rotation / 90) % 4;
 		index = (static_cast<unsigned int>(this->orientation) * 4 + uv_vertex) * 5;
-
-		auto texture = this->get_texture(assets, texture_by_variable);
 
 		glm::vec2 uv;
 		uv.x = vertices[index + 3];
 		uv.y = vertices[index + 4];
 
-		glm::vec2 sprite_size = this->to_uv - this->from_uv;
-
-		uv *= sprite_size;
-		uv += texture.from + this->from_uv;
+		uv *= this->to_uv - this->from_uv;
+		uv += this->from_uv;
 
 		buffer.push_back(uv.x);
 		buffer.push_back(uv.y);
 
-		// Tint index
+		// Tint
 		buffer.push_back(this->tint_index);
 	}
 

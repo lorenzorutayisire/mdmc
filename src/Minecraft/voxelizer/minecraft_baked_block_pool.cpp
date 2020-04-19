@@ -1,5 +1,7 @@
 #include "minecraft_baked_block_pool.hpp"
 
+#define VERTEX_SIZE (3 + 2 + 2 + 1)
+
 // ================================================================================================
 // MinecraftBakedBlock
 // ================================================================================================
@@ -68,22 +70,31 @@ void MinecraftBakedBlockPool::bake(std::shared_ptr<MinecraftAssets const> const&
 	glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
 	glBufferData(GL_ARRAY_BUFFER, buffer.size() * sizeof(GLfloat), buffer.data(), GL_STATIC_DRAW);
 
-	constexpr size_t vertex_size = 3 * sizeof(GLfloat) + 2 * sizeof(GLfloat) + 1 * sizeof(GLfloat);
+	GLuint loc;
 	size_t shift = 0;
 
-	// POSITION
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, vertex_size, (void*)shift);
+	// Position
+	loc = 0;
+	glEnableVertexAttribArray(loc);
+	glVertexAttribPointer(loc, 3, GL_FLOAT, GL_FALSE, VERTEX_SIZE * sizeof(GLfloat), (void*) shift);
 	shift += 3 * sizeof(GLfloat);
 
-	// UV
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, vertex_size, (void*)shift);
+	// Tile
+	loc = 1;
+	glEnableVertexAttribArray(loc);
+	glVertexAttribPointer(loc, 2, GL_FLOAT, GL_FALSE, VERTEX_SIZE * sizeof(GLfloat), (void*) shift);
 	shift += 2 * sizeof(GLfloat);
 
-	// TINT_INDEX
-	glEnableVertexAttribArray(2);
-	glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, vertex_size, (void*)shift);
+	// Uv
+	loc = 2;
+	glEnableVertexAttribArray(loc);
+	glVertexAttribPointer(loc, 2, GL_FLOAT, GL_FALSE, VERTEX_SIZE * sizeof(GLfloat), (void*) shift);
+	shift += 2 * sizeof(GLfloat);
+
+	// Tint
+	loc = 3;
+	glEnableVertexAttribArray(loc);
+	glVertexAttribPointer(loc, 1, GL_FLOAT, GL_FALSE, VERTEX_SIZE * sizeof(GLfloat), (void*) shift);
 	shift += 1 * sizeof(GLfloat);
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
