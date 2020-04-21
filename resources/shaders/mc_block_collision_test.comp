@@ -29,6 +29,7 @@ uniform uvec3 u_size;
 #define ERROR_VOXEL              vec4(0)
 
 #define EPSILON  3.552713678800501e-15
+#define INFINITY uintBitsToFloat(0x7F800000)
 
 layout(binding = 1) uniform atomic_uint u_alloc;
 
@@ -227,23 +228,6 @@ struct Face
 	vec3 d1, d2;
 };
 
-void generate_face(uint element_id, uint face_id, out Face o_face)
-{
-	Vertex _00, _10, _01, _11;
-	vertex_at(element_id, face_id, 2, _00);
-	vertex_at(element_id, face_id, 1, _01);
-	vertex_at(element_id, face_id, 3, _10);
-	vertex_at(element_id, face_id, 0, _11);
-
-	o_face._min = _00;
-	o_face._max = _11;
-	o_face.d1 = _01.position - _00.position;
-	o_face.d2 = _10.position - _00.position;
-	
-	approximate_zero(o_face.d1);
-	approximate_zero(o_face.d2);
-}
-
 // https://stackoverflow.com/questions/9605556/how-to-project-a-point-onto-a-plane-in-3d
 vec3 face_project_point(vec3 point, Face face)
 {
@@ -257,42 +241,65 @@ vec2 face_relative_coord(vec3 face_point, Face face)
 	vec3 op = face_point - face._min.position;
 	float d = face.d1.x * face.d2.y - face.d2.x * face.d1.y;
 
+	if (d < EPSILON)
+		push_voxel(uvec3(0), vec4(1,0,0,1));
+
 	vec2 res;
 	res.x = (op.x * face.d2.y - face.d2.x * op.y) / d;
 	res.y = (op.y * face.d1.x - face.d1.y * op.x) / d;
 	return res;
 }
 
-vec4 average_color(vec3 point, uint element_id)
+vec4 average_color(vec3 p, uint element_id)
 {
-	Face face;
-
-//	float max_dist = 0;
-//	for (uint face_id = 0; face_id < 6; face_id++)
-//	{
-//		generate_face(element_id, face_id, face);
-//		float dist = length(point - face_project_point(point, face));
-//		if (dist > max_dist)
-//			max_dist = dist;
-//	}
-	
 	vec4 color = vec4(0);
-	float min_dist = uintBitsToFloat(0x7F800000); // Infinity
+	float min_dist = INFINITY;
 
 	for (uint face_id = 0; face_id < 6; face_id++)
 	{
-		generate_face(element_id, face_id, face);
-
-		// Project the point on the face.
-		vec3 proj = face_project_point(point, face);
-		vec2 uv = face_relative_coord(proj, face);
-
-		uv += face._min.uv;
-		uv = clamp(uv, face._min.uv, face._max.uv);
-		uv += face._min.tile;
-		uv /= textureSize(u_texture2d, 0);
+		// Load the face vertices from the buffer.
+		Vertex v[4];
+		for (uint v_id = 0; v_id < 4; v_id++)
+			vertex_at(element_id, face_id, v_id, v[v_id]);
 		
-		float dist = length(point - proj);
+		// Since Minecraft UV can be flipped or rotated, we have to dynamically search for the vertex
+		// that has the minimum UV coordinates. Namely, this is the origin.
+		uint o_id = 0;
+		for (uint v_id = 1; v_id < 4; v_id++)
+		{
+			if (v[v_id].uv.x <= v[o_id].uv.x && v[v_id].uv.y <= v[o_id].uv.y)
+				o_id = v_id;
+		}
+
+		// Take the following points based from the found origin in order to find the plane axes.
+		Vertex o = v[o_id];
+		Vertex _max = v[(o_id + 2) % 4];
+		vec3 d1 = normalize(v[(o_id + 1) % 4].position - o.position);
+		vec3 d2 = normalize(v[(o_id + 3) % 4].position - o.position);
+		
+		approximate_zero(d1);
+		approximate_zero(d2);
+
+		// Project the point on the face's plane. The projected point has world coordinates.
+		vec3 w = p - o.position;
+		vec3 n = normalize(cross(d1, d2));
+		vec3 p_proj = p - dot(w, n) * n;
+		
+		// Get the projected point coordinates as plane parameters, bi-dimensional.
+		// Those are also the UV of the face, between [0, _max].
+		vec3 op = p_proj - o.position;
+		vec2 uv;
+		uv.x = dot(d1, op);
+		uv.y = dot(d2, op);
+
+		// Normalize the UV found dividing them by the size of the face.
+		//uv /= (_max.uv - o.uv);
+		uv += o.uv;
+		uv = clamp(uv, o.uv, _max.uv);
+		uv += o.tile;
+		uv /= textureSize(u_texture2d, 0);
+
+		float dist = length(p - p_proj);
 		if (dist < min_dist)
 		{
 			color = texture(u_texture2d, uv);
