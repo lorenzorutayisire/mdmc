@@ -262,35 +262,35 @@ vec4 average_color(vec3 p, uint element_id)
 		for (uint v_id = 0; v_id < 4; v_id++)
 			vertex_at(element_id, face_id, v_id, v[v_id]);
 		
-		// Since Minecraft UV can be flipped or rotated, we have to dynamically search for the vertex
-		// that has the minimum UV coordinates. Namely, this is the origin.
-		uint o_id = 0;
+		// Since Minecraft UV can be flipped or rotated, we have to dynamically search for the vertices.
+		uint o_id = 0, x_id = 0, y_id = 0;
 		for (uint v_id = 1; v_id < 4; v_id++)
 		{
-			if (v[v_id].uv.x <= v[o_id].uv.x && v[v_id].uv.y <= v[o_id].uv.y)
-				o_id = v_id;
+			if (v[v_id].uv.x >= v[x_id].uv.x && v[v_id].uv.y <= v[x_id].uv.y) x_id = v_id;
+			if (v[v_id].uv.x <= v[y_id].uv.x && v[v_id].uv.y >= v[y_id].uv.y) y_id = v_id;
+			if (v[v_id].uv.x <= v[o_id].uv.x && v[v_id].uv.y <= v[o_id].uv.y) o_id = v_id;
 		}
 
 		// Take the following points based from the found origin in order to find the plane axes.
 		Vertex o = v[o_id];
 		Vertex _max = v[(o_id + 2) % 4];
-		vec3 d1 = normalize(v[(o_id + 1) % 4].position - o.position);
-		vec3 d2 = normalize(v[(o_id + 3) % 4].position - o.position);
+		vec3 dx = normalize(v[x_id].position - o.position);
+		vec3 dy = normalize(v[y_id].position - o.position);
 		
-		approximate_zero(d1);
-		approximate_zero(d2);
+		approximate_zero(dx);
+		approximate_zero(dy);
 
 		// Project the point on the face's plane. The projected point has world coordinates.
 		vec3 w = p - o.position;
-		vec3 n = normalize(cross(d1, d2));
+		vec3 n = normalize(cross(dx, dy));
 		vec3 p_proj = p - dot(w, n) * n;
 		
 		// Get the projected point coordinates as plane parameters, bi-dimensional.
 		// Those are also the UV of the face, between [0, _max].
 		vec3 op = p_proj - o.position;
 		vec2 uv;
-		uv.x = dot(d1, op);
-		uv.y = dot(d2, op);
+		uv.x = dot(dx, op);
+		uv.y = dot(dy, op);
 
 		// Normalize the UV found dividing them by the size of the face.
 		//uv /= (_max.uv - o.uv);
