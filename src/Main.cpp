@@ -24,6 +24,8 @@
 
 // imgui
 #include <imgui.h>
+#include <imgui_freetype.h>
+
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
@@ -33,7 +35,6 @@
 #define WINDOW_HEIGHT 720
 
 using namespace std;
-
 
 int main(int argc, char** argv)
 {
@@ -58,8 +59,12 @@ int main(int argc, char** argv)
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 
-	ImGuiIO& io = ImGui::GetIO(); (void)io;
-	//io.Fonts->AddFontFromFileTTF("resources/fonts/NanumGothic-Regular.ttf", 16.0f);
+	ImGuiIO& io = ImGui::GetIO(); (void) io;
+	ImFontConfig font_cfg;
+    font_cfg.RasterizerMultiply = 1.1f;
+	font_cfg.RasterizerFlags = ImGuiFreeType::ForceAutoHint;
+	io.Fonts->AddFontFromFileTTF("resources/fonts/Roboto-Regular.ttf", 16.0f, &font_cfg);
+    ImGuiFreeType::BuildFontAtlas(io.Fonts);
 
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init("#version 460");
@@ -81,7 +86,7 @@ int main(int argc, char** argv)
 		float delta = prior_time == 0 ? 0 : time - prior_time;
 		prior_time = time;
 
-		stage.update(delta);
+        stage.update(delta);
 
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
@@ -91,6 +96,9 @@ int main(int argc, char** argv)
 		glfwGetFramebufferSize(window, &width, &height);
 
 		glViewport(0, 0, width, height);
+
+        glClear(GL_COLOR_BUFFER_BIT);
+        glClearColor(0.75, 0.75, 0, 0);
 
 		stage.render();
 
