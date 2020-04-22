@@ -38,6 +38,7 @@ message(${CONAN_LIBS})
 
 target_link_libraries(${BIN} ${CONAN_LIBS})
 
+
 # libnbt++
 set(NBT_BUILD_TESTS OFF)
 add_subdirectory("dep/libnbtplusplus")
@@ -45,10 +46,10 @@ add_subdirectory("dep/libnbtplusplus")
 include_directories("dep/libnbtplusplus/include")
 target_link_libraries(${BIN} nbt++)
 
-# imgui_impl
-add_subdirectory("dep/imgui_impl")
-include_directories("dep/imgui_impl")
-target_link_libraries(${BIN} imgui_impl)
+# imgui_ext
+add_subdirectory("dep/imgui")
+include_directories("dep/imgui/include")
+target_link_libraries(${BIN} imgui_ext)
 
 # cub
 include_directories("dep/cub")

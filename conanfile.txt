@@ -1,13 +1,12 @@
 [requires]
-stb/20190512@conan/stable
-glm/0.9.9.4@g-truc/stable
-zlib/1.2.11@conan/stable
-Assimp/4.1.0@jacmoe/stable
+glm/0.9.9.8
+assimp/5.0.1
 glew/2.1.0@bincrafters/stable
-glfw/3.3@bincrafters/stable
-imgui/1.73@bincrafters/stable
-rapidjson/1.1.0@bincrafters/stable
-gtest/1.8.1@bincrafters/stable
+glfw/3.3.2@bincrafters/stable
+imgui/1.76
+rapidjson/1.1.0
+stb/20200203
+freetype/2.10.1
 
 [generators]
 cmake

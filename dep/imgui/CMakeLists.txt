@@ -1,8 +1,10 @@
-# imgui_impl
+# imgui_ext
 
-set(BIN imgui_impl)
+set(BIN imgui_ext)
 
 file(GLOB_RECURSE SRC LIST_DIRECTORIES false "*.h" "*.hpp" "*.cpp")
+
+include_directories("include")
 
 add_library(${BIN} ${SRC})
 
