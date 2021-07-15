@@ -26,33 +26,23 @@ file(GLOB_RECURSE SRC LIST_DIRECTORIES false "src/*.h" "src/*.hpp" "src/*.cpp" "
 include_directories("src")
 
 add_executable(${BIN} ${SRC})
+conan_target_link_libraries(${BIN})
 
 # ================================================================
 # /dep
 # ================================================================
 
-# cuda
-include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
-
-message(${CONAN_LIBS})
-
-target_link_libraries(${BIN} ${CONAN_LIBS})
-
-
 # libnbt++
-set(NBT_BUILD_TESTS OFF)
+set(NBT_BUILD_TESTS OFF CACHE BOOL "")
 add_subdirectory("dep/libnbtplusplus")
 
 include_directories("dep/libnbtplusplus/include")
 target_link_libraries(${BIN} nbt++)
 
-# imgui_ext
+#imgui_ext
 add_subdirectory("dep/imgui")
-include_directories("dep/imgui/include")
+include_directories("dep/imgui")
 target_link_libraries(${BIN} imgui_ext)
-
-# cub
-include_directories("dep/cub")
 
 # renderdoc
 include_directories("dep/renderdoc")
@@ -67,3 +57,8 @@ include_directories("dep/ThreadPool")
 
 # hat-trie
 include_directories("dep/hat-trie/include")
+
+# libzip
+add_subdirectory("dep/libzip")
+include_directories("dep/libzip/lib")
+target_link_libraries(${BIN} zip)

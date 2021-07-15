@@ -3,6 +3,10 @@ conaninfo.txt
 conanbuildinfo.txt
 conanbuildinfo.cmake
 
+# CLion
+cmake-build-debug
+.idea
+
 # CMake
 CMakeSettings.json
 
@@ -17,3 +21,6 @@ mc_tmp
 
 # Minecraft assets
 resources/minecraft_assets/*.bin
+
+# Python
+venv

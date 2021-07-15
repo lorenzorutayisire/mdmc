@@ -7,15 +7,17 @@
 #include <iostream>
 
 #include <imgui.h>
+#include <zip.h>
 
 #include <glm/gtx/transform.hpp>
 
-#include "minecraft/assets/minecraft_assets.hpp"
+
+#ifdef WIN32
+	#include <shlobj_core.h>
+#endif
 
 using namespace std::chrono;
 using ms = std::chrono::milliseconds;
-
-namespace fs = std::filesystem;
 
 glm::mat4 get_projection()
 {
@@ -32,19 +34,21 @@ MinecraftAssetsPhase::MinecraftAssetsPhase() :
 	camera(glm::vec3(8, 8, 8))
 {}
 
-std::shared_ptr<Octree> MinecraftAssetsPhase::voxelize(MinecraftBakedBlock const& block, unsigned int resolution)
+std::shared_ptr<Octree> MinecraftAssetsPhase::voxelize(unsigned int resolution)
 {
-	size_t side = glm::exp2(resolution);
+	uint32_t volume_side = glm::exp2(resolution);
+
+	auto& block = m_baked_mc_blocks->m_blocks.at(current_block_id);
 
 	std::cout << "Voxelization process started..." << std::endl;
-	std::cout << "Vertices pool: ["  << block.start_at << "," << block.count << "]" << std::endl;
+	std::cout << "Vertices pool: ["  << block.m_start_at << "," << block.m_count << "]" << std::endl;
 	std::cout << "Resolution: "		 << resolution     << std::endl;
-	std::cout << "Side: "			 << side           << std::endl;
+	std::cout << "Side: "			 << volume_side    << std::endl;
 
 	ms start_at = duration_cast<ms>(system_clock::now().time_since_epoch());
 
 	this->octree = std::make_shared<Octree>(resolution);
-	std::shared_ptr<VoxelList> voxel_list = this->voxelizer.voxelize(block, this->context->get_atlas_texture(), side);
+	std::shared_ptr<VoxelList> voxel_list = m_mc_blocks_voxelizer.voxelize(block, volume_side);
 	this->octree_builder.build(voxel_list, octree);
 
 	ms end_at = duration_cast<ms>(system_clock::now().time_since_epoch());
@@ -62,7 +66,7 @@ void MinecraftAssetsPhase::toggle_view_block_octree_mode()
 	this->view_block_octree = !this->view_block_octree;
 	if (this->view_block_octree && this->octree == nullptr)
 	{
-		this->octree = this->voxelize(this->minecraft_baked_block_pool->get_block(this->current_block_id), 5);
+		this->octree = this->voxelize(5);
 	}
 }
 
@@ -150,7 +154,7 @@ void MinecraftAssetsPhase::test_block_sliding_input(GLFWwindow* window, float de
 		{
 			this->shift_block_id(right_key);
 			
-			auto size = this->assets->block_state_variant_by_id.size();
+			auto size = m_mc_assets->m_block_state_variant_by_name.size();
 			if (this->current_block_id < 0) this->current_block_id = 0;
 			if (this->current_block_id >= size) this->current_block_id = size - 1;
 
@@ -186,61 +190,83 @@ void MinecraftAssetsPhase::update(Stage& stage, float delta)
 	}
 }
 
-void MinecraftAssetsPhase::setup(std::string const& version)
+std::filesystem::path get_mc_data_folder()
 {
-	using namespace std::chrono;
+#ifdef WIN32
+	TCHAR appdata_path[MAX_PATH];
+	SHGetFolderPath(nullptr, CSIDL_APPDATA, nullptr, 0, appdata_path);
 
-	auto current_ms = []() { return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count(); };
-	size_t start_ms, end_ms;
-
-	// Loads the assets resources from files.
-	start_ms = current_ms();
-	this->assets = MinecraftAssets::load(fs::path("resources") / "minecraft_assets", version, [](std::filesystem::path const& file) {});
-	end_ms = current_ms();
-	std::cout << "Minecraft assets " << version << " loaded in " << (end_ms - start_ms) << "ms." << std::endl;
-
-	// Bakes the atlas texture.
-	start_ms = current_ms();
-	this->context = MinecraftContext::build(this->assets);
-	end_ms = current_ms();
-	std::cout << "Minecraft atlas texture baked in " << (end_ms - start_ms) << "ms." << std::endl;
-
-	// Bakes the assets blocks.
-	start_ms = current_ms();
-
-	this->minecraft_baked_block_pool = std::make_shared<MinecraftBakedBlockPool>();
-	this->minecraft_baked_block_pool->bake(this->assets);
-
-	end_ms = current_ms();
-	std::cout << "Minecraft assets blocks baked in " << (end_ms - start_ms) << "ms." << std::endl;
+	return std::filesystem::path(appdata_path) / ".minecraft";
+#else
+	#error "Only WIN32 is supported!"
+#endif
 }
 
-void MinecraftAssetsPhase::ui_select_minecraft_version(std::string& selected_version, const std::function<void(const std::string&)>& on_load)
+std::vector<std::string> get_available_mc_versions()
 {
-	if (ImGui::BeginPopupModal("select_minecraft_version", NULL, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove))
+	std::vector<std::string> mc_versions;
+	for (auto const& mc_version : std::filesystem::directory_iterator(get_mc_data_folder() / "versions")) {
+		if (mc_version.is_directory()) {
+			mc_versions.push_back(mc_version.path().filename().u8string());
+		}
+	}
+	return mc_versions;
+}
+
+void MinecraftAssetsPhase::setup(std::string const& mc_version)
+{
+	auto jar = get_mc_data_folder() / "versions" / mc_version / (mc_version + ".jar");
+	int err;
+	zip* mc_jar = zip_open(jar.u8string().c_str(), 0, &err);
+	if (err == NULL) {
+		throw std::runtime_error("Can't unzip Minecraft .jar file");
+	}
+
+	// Loading
+	std::cout << "Loading Minecraft " << mc_version << " assets..." << std::endl;
+
+	m_mc_assets = std::make_shared<mdmc::mc_assets>();
+	m_mc_assets->from_jar(mc_jar, mc_version);
+
+	// Baking
+	std::cout << "Baking assets for voxelization & debug rendering..." << std::endl;
+
+	m_baked_mc_blocks = std::make_shared<mdmc::baked_mc_blocks>();
+	m_baked_mc_blocks->from_mc_assets(*m_mc_assets);
+
+	std::cout << "Done" << std::endl;
+}
+
+using on_mc_version_select = std::function<void(std::string&)>;
+
+void ui_select_mc_version(std::string& selected_version, on_mc_version_select const& callback)
+{
+	if (ImGui::BeginPopupModal(
+		"select_minecraft_version",
+		nullptr,
+		ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove
+		))
 	{
-		// Version
-		if (ImGui::BeginCombo("Version", selected_version.c_str()))
+		// Version selector
+		if (ImGui::BeginCombo("Select a version", selected_version.c_str()))
 		{
-			for (const auto& entry : std::filesystem::directory_iterator("resources/minecraft_assets"))
+			for (auto const& mc_version : get_available_mc_versions())
 			{
-				auto version = entry.path().filename().u8string();
-				bool selected = selected_version == version;
-
-				if (ImGui::Selectable(version.c_str(), selected))
-					selected_version = version;
-
-				if (selected)
+				bool selected = selected_version == mc_version;
+				if (ImGui::Selectable(mc_version.c_str(), selected)) {
+					selected_version = mc_version;
+				}
+				if (selected) {
 					ImGui::SetItemDefaultFocus();
+				}
 			}
-
 			ImGui::EndCombo();
 		}
 
 		// Load
 		if (ImGui::Button("Load"))
 		{
-			on_load(selected_version);
+			callback(selected_version);
 			ImGui::CloseCurrentPopup();
 		}
 
@@ -284,12 +310,13 @@ void MinecraftAssetsPhase::ui_block_info(unsigned int& y)
 		ImGuiWindowFlags_NoNavFocus
 	))
 	{
-		auto& block_by_id = this->assets->block_state_variant_by_id;
-
 		auto block_id = this->current_block_id;
-		auto block_name = block_by_id.at(block_id)->first;
 
-		ImGui::Text("ID: %d/%d", block_id + 1, block_by_id.size());
+		auto iterator = m_mc_assets->m_block_state_variant_by_name.begin();
+		std::advance(iterator, block_id);
+		auto block_name = iterator->first;
+
+		ImGui::Text("ID: %d/%llu", block_id + 1, m_mc_assets->m_block_state_variant_by_name.size());
 		ImGui::Text("Name: %s", block_name.c_str());
 
 		//ImGui::TextColored(ImVec4(1, 1, 1, 0.7), "Use < > to slide among the loaded blocks.");
@@ -340,9 +367,9 @@ void MinecraftAssetsPhase::ui_menu_bar(unsigned int& y)
 
 void MinecraftAssetsPhase::ui_main()
 {
-	this->ui_select_minecraft_version(this->version, [&](const std::string& version) {
-		this->setup(version);
-		this->state = State::VIEW;
+	ui_select_mc_version(m_version, [&](std::string const& version) {
+		setup(version);
+		state = State::VIEW;
 	});
 	this->ui_voxelization_options();
 
@@ -374,7 +401,7 @@ void MinecraftAssetsPhase::render(Stage& stage)
 
 	this->ui_main();
 
-	if (!this->view_block_octree && this->minecraft_baked_block_pool != nullptr)
+	if (!this->view_block_octree && this->m_baked_mc_blocks != nullptr)
 	{
 		this->minecraft_renderer.render_block(
 			get_projection() * this->camera.get_matrix(),

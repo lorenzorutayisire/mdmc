@@ -13,39 +13,44 @@
 
 #include "scene/scene_renderer.hpp"
 
-class ScenePhase : public Phase
+namespace mdmc
 {
-public:
-	enum class State
+	class scene_phase : public Phase
 	{
-		LOADING,
-		VIEW
+	public:
+		enum class State
+		{
+			LOADING,
+			VIEW
+		};
+
+	private:
+		State state = scene_phase::State::LOADING;
+
+		char scene_filename[512];
+
+		std::shared_ptr<Scene> scene;
+		glm::mat4 transform;
+
+		tdogl::Camera camera;
+		CameraController camera_controller;
+
+		SceneRenderer scene_renderer;
+
+		Material::Type selected_view_type = Material::Type::DIFFUSE;
+
+		void download_minecraft_assets(char const* version);
+		void load_scene(const std::filesystem::path& path);
+
+		void ui_load_scene_modal();
+		bool ui_next_button(Stage& stage);
+
+		void add_load_menu();
+		void add_view_type_menu();
+
+	public:
+		void update(Stage& stage, float delta) override;
+		void render(Stage& stage) override;
 	};
+}
 
-private:
-	State state = ScenePhase::State::LOADING;
-
-	char scene_filename[512];
-
-	std::shared_ptr<Scene> scene;
-	glm::mat4 transform;
-
-	tdogl::Camera camera;
-	CameraController camera_controller;
-
-	SceneRenderer scene_renderer;
-
-	Material::Type selected_view_type = Material::Type::DIFFUSE;
-
-	void load_scene(const std::filesystem::path& path);
-
-	void ui_load_scene_modal();
-	bool ui_next_button(Stage& stage);
-
-	void add_load_menu();
-	void add_view_type_menu();
-
-public:
-	void update(Stage& stage, float delta) override;
-	void render(Stage& stage) override;
-};

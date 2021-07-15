@@ -13,7 +13,7 @@
 #include "scene/ai_scene_loader.hpp"
 #include "minecraft_assets_phase.hpp"
 
-void ScenePhase::update(Stage& stage, float delta)
+void mdmc::scene_phase::update(Stage& stage, float delta)
 {
 	GLFWwindow* window = stage.window;
 
@@ -27,16 +27,21 @@ void ScenePhase::update(Stage& stage, float delta)
 	}
 }
 
-void ScenePhase::load_scene(const std::filesystem::path& path)
+void mdmc::scene_phase::download_minecraft_assets(const char* version)
+{
+
+}
+
+void mdmc::scene_phase::load_scene(const std::filesystem::path& path)
 {
 	this->scene = aiSceneLoader::load(path);
 
 	this->state = State::VIEW;
 }
 
-void ScenePhase::ui_load_scene_modal()
+void mdmc::scene_phase::ui_load_scene_modal()
 {
-	if (ImGui::BeginPopupModal("load_scene", NULL, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove))
+	if (ImGui::BeginPopupModal("load_scene", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove))
 	{
 		ImGui::InputText("", this->scene_filename, 512);
 
@@ -62,7 +67,7 @@ void ScenePhase::ui_load_scene_modal()
 
 		if (ImGui::Button("Load"))
 		{
-			this->load_scene(this->scene_filename);
+			load_scene(scene_filename);
 
 			ImGui::CloseCurrentPopup();
 		}
@@ -77,7 +82,7 @@ void ScenePhase::ui_load_scene_modal()
 	}
 }
 
-bool ScenePhase::ui_next_button(Stage& stage)
+bool mdmc::scene_phase::ui_next_button(Stage& stage)
 {
 	auto display_size = ImGui::GetIO().DisplaySize;
 	auto window_size = ImVec2(256, 64);
@@ -98,16 +103,16 @@ bool ScenePhase::ui_next_button(Stage& stage)
 	return false;
 }
 
-void ScenePhase::add_load_menu()
+void mdmc::scene_phase::add_load_menu()
 {
 	if (ImGui::BeginMenu("Load"))
 	{
-		this->state = ScenePhase::State::LOADING;
+		this->state = mdmc::scene_phase::State::LOADING;
 		ImGui::EndMenu();
 	}
 }
 
-void ScenePhase::add_view_type_menu()
+void mdmc::scene_phase::add_view_type_menu()
 {
 	const char* view_types[]{ "None", "Diffuse", "Ambient", "Specular", "Emissive" };
 
@@ -123,7 +128,7 @@ void ScenePhase::add_view_type_menu()
 	}
 }
 
-void ScenePhase::render(Stage& stage)
+void mdmc::scene_phase::render(Stage& stage)
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -141,13 +146,13 @@ void ScenePhase::render(Stage& stage)
 
 	switch (this->state)
 	{
-	case ScenePhase::State::LOADING:
+	case mdmc::scene_phase::State::LOADING:
 		ImGui::OpenPopup("load_scene");
 
 		glClearColor(0.1, 0.1, 0.6, 0);
 		break;
 
-	case ScenePhase::State::VIEW:
+	case mdmc::scene_phase::State::VIEW:
 
 		glClearColor(0.6, 0.1, 0.1, 0);
 

@@ -4,6 +4,8 @@
 
 #include <glm/gtc/type_ptr.hpp>
 
+#ifdef IGNORED
+
 void MinecraftRenderer::render(
 	glm::mat4 const& camera,
 	glm::mat4 const& transform,
@@ -81,3 +83,4 @@ void MinecraftRenderer::render_world(
 		world->draw();
 	});
 }
+#endif

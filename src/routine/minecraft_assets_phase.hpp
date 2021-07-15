@@ -10,11 +10,8 @@
 
 #include <tsl/htrie_map.h>
 
-#include "minecraft/minecraft_world.hpp"
-#include "minecraft/minecraft_renderer.hpp"
-
-#include "minecraft/voxelizer/minecraft_baked_block_pool.hpp"
-#include "minecraft/voxelizer/minecraft_block_voxelizer.hpp"
+#include "mc/mc_assets.hpp"
+#include "mc/mc_blocks_voxelizer.hpp"
 
 #include "octree/octree.hpp"
 #include "octree/octree_builder.hpp"
@@ -37,7 +34,6 @@ public:
 private:
 	State state = State::SELECT_MINECRAFT_VERSION;
 
-	MinecraftBlockVoxelizer voxelizer;
 	OctreeBuilder octree_builder;
 	OctreeRenderer octree_tracer;
 
@@ -46,10 +42,12 @@ private:
 	int view_block_octree = false;
 	std::shared_ptr<Octree> octree;
 
-	std::string version = "1.15.2";
+	std::string m_version = "1.15.2";
 
-	std::shared_ptr<MinecraftAssets const> assets;
-	std::shared_ptr<MinecraftContext const> context;
+	mdmc::mc_blocks_voxelizer m_mc_blocks_voxelizer;
+
+	std::shared_ptr<mdmc::mc_assets> m_mc_assets;
+	std::shared_ptr<mdmc::baked_mc_blocks> m_baked_mc_blocks;
 
 	//std::vector<std::pair<std::string, MinecraftBlockStateVariant const*>> block_by_id;
 	int current_block_id = 0;
@@ -61,8 +59,7 @@ private:
 	void test_camera_input(GLFWwindow* window, float delta);
 	void test_block_sliding_input(GLFWwindow* window, float delta);
 
-	std::shared_ptr<MinecraftBakedBlockPool> minecraft_baked_block_pool;
-	MinecraftRenderer minecraft_renderer;
+	// todo MinecraftRenderer minecraft_renderer;
 
 	std::unique_ptr<GlfwCallbackHandler> glfw_cb_handler;
 
@@ -70,9 +67,8 @@ private:
 
 	void ui_menu_bar(unsigned int& y);
 
-	std::shared_ptr<Octree> voxelize(MinecraftBakedBlock const& block, unsigned int resolution);
+	std::shared_ptr<Octree> voxelize(unsigned int resolution);
 
-	void ui_select_minecraft_version(std::string& current_version, const std::function<void(const std::string&)>& on_load);
 	void ui_voxelization_options();
 
 	void ui_block_info(unsigned int& y);

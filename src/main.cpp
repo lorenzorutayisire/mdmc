@@ -24,8 +24,6 @@
 
 // imgui
 #include <imgui.h>
-#include <imgui_freetype.h>
-
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
@@ -59,12 +57,12 @@ int main(int argc, char** argv)
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 
-	ImGuiIO& io = ImGui::GetIO(); (void) io;
-	ImFontConfig font_cfg;
-    font_cfg.RasterizerMultiply = 1.1f;
-	font_cfg.RasterizerFlags = ImGuiFreeType::ForceAutoHint;
-	io.Fonts->AddFontFromFileTTF("resources/fonts/Roboto-Regular.ttf", 16.0f, &font_cfg);
-    ImGuiFreeType::BuildFontAtlas(io.Fonts);
+	//ImFontConfig font_cfg;
+    //font_cfg.RasterizerMultiply = 1.1f;
+	//font_cfg.RasterizerFlags = ImGuiFreeType::ForceAutoHint;
+	//ImGuiIO& io = ImGui::GetIO(); (void) io;
+	//io.Fonts->AddFontFromFileTTF("resources/fonts/Roboto-Regular.ttf", 16.0f, &font_cfg);
+    //ImGuiFreeType::BuildFontAtlas(io.Fonts);
 
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init("#version 460");

@@ -4,6 +4,8 @@
 
 #include <glm/gtx/transform.hpp>
 
+#ifdef IGNORED
+
 MinecraftWorld::MinecraftWorld(std::shared_ptr<MinecraftContext const> const& context) :
 	context(context)
 {
@@ -82,3 +84,4 @@ void MinecraftWorld::draw()
 	glDrawArrays(GL_QUADS, 0, this->vertices_count);
 }
 
+#endif

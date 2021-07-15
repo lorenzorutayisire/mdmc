@@ -10,3 +10,6 @@
 [submodule "dep/hat-trie"]
 	path = dep/hat-trie
 	url = https://github.com/Tessil/hat-trie
+[submodule "dep/libzip"]
+	path = dep/libzip
+	url = https://github.com/nih-at/libzip

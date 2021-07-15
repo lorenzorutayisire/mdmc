@@ -7,8 +7,7 @@
 
 #include <glm/glm.hpp>
 
-#include "minecraft_context.hpp"
-#include "assets/minecraft_block_state.hpp"
+#ifdef IGNORED
 
 // std::hash<glm::ivec3>
 namespace std
@@ -59,3 +58,5 @@ public:
 	void build();
 	void draw();
 };
+
+#endif

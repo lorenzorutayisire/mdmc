@@ -1,5 +1,6 @@
 #pragma once
 
+#ifdef IGNORED
 #include "util/gl.hpp"
 #include "minecraft_world.hpp"
 
@@ -39,3 +40,5 @@ public:
 		std::shared_ptr<MinecraftWorld> const& world
 	);
 };
+
+#endif
