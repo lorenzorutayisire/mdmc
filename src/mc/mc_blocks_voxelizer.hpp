@@ -16,7 +16,7 @@ namespace mdmc
 			std::reference_wrapper<mdmc::baked_mc_blocks> m_pool;
 			uint32_t m_start_at, m_count;
 
-			inline baked_block(mdmc::baked_mc_blocks pool) :
+			inline baked_block(mdmc::baked_mc_blocks& pool) :
 				m_pool(pool)
 			{}
 		};

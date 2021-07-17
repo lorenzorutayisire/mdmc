@@ -60,8 +60,8 @@ std::shared_ptr<VoxelList> mdmc::mc_blocks_voxelizer::voxelize(mdmc::baked_mc_bl
 {
 	m_program.use();
 
-	glUniform1ui (m_program.get_uniform_location("u_start"), block.m_start_at);
-	glUniform1ui (m_program.get_uniform_location("u_count"), block.m_count);
+	glUniform1ui(m_program.get_uniform_location("u_start"), block.m_start_at);
+	glUniform1ui(m_program.get_uniform_location("u_count"), block.m_count);
 	glUniform3uiv(m_program.get_uniform_location("u_size"), 1, glm::value_ptr(glm::uvec3(volume_side)));
 
 	glBindTexture(GL_TEXTURE_2D, block.m_pool.get().m_atlas_texture);
