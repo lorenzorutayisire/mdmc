@@ -15,7 +15,7 @@ void generate_mc_block_textures_atlas(zip* mc_jar, mdmc::mc_atlas& atlas)
 {
 	zip_stat_t st{};
 
-	std::vector<std::string> texture_names;
+	std::vector<std::filesystem::path> texture_names;
 
 	atlas.m_entry_width = 0;
 	atlas.m_entry_height = 0;
@@ -45,25 +45,22 @@ void generate_mc_block_textures_atlas(zip* mc_jar, mdmc::mc_atlas& atlas)
 
 			stbi_image_free(image);
 
-			texture_names.emplace_back(filename.u8string());
-
-			mdmc::mc_atlas::texture texture{};
-			texture.m_x = 0;
-			texture.m_y = 0;
-			texture.m_width = w;
-			texture.m_height = h;
-			atlas.m_textures.emplace("block/" + filename.stem().u8string(), texture);
+			texture_names.emplace_back(filename);
 		}
 	}
 
-	atlas.m_data.resize(atlas.size() * STBI_rgb_alpha, 0);
+	// Allocates the memory for the texture atlas and writes the textures to it.
 
-	size_t offset = 0;
+	atlas.m_data.resize((texture_names.size() * atlas.entry_size()) * STBI_rgb_alpha, 0);
 
-	for (std::string const& texture_name : texture_names)
+	size_t atl_row_w = texture_names.size() * atlas.m_entry_width;
+
+	size_t row_off = 0;
+
+	for (auto const& texture_name : texture_names)
 	{
 		zip_stat_init(&st);
-		zip_stat(mc_jar, texture_name.c_str(), 0, &st);
+		zip_stat(mc_jar, texture_name.u8string().c_str(), 0, &st);
 
 		std::vector<stbi_uc> buffer(st.size);
 
@@ -74,11 +71,23 @@ void generate_mc_block_textures_atlas(zip* mc_jar, mdmc::mc_atlas& atlas)
 		int w, h, ch;
 		stbi_uc* image = stbi_load_from_memory(buffer.data(), (int) buffer.size(), &w, &h, &ch, STBI_rgb_alpha);
 
-		std::memcpy(atlas.m_data.data() + offset, image, w * h * STBI_rgb_alpha);
+		for (int r = 0; r < h; r++) {
+			size_t img_off = (r * w) * STBI_rgb_alpha; // The address of the first pixel of the row of the image.
+			size_t atl_off = (r * atl_row_w + row_off) * STBI_rgb_alpha; // The offset of the first pixel of the row of the image within the atlas.
+
+			std::memcpy(atlas.m_data.data() + atl_off, image + img_off, w * STBI_rgb_alpha); // Copy the image's row to the atlas.
+		}
 
 		stbi_image_free(image);
 
-		offset += atlas.entry_size() * STBI_rgb_alpha;
+		mdmc::mc_atlas::texture texture{};
+		texture.m_x = row_off;
+		texture.m_y = 0;
+		texture.m_width = w;
+		texture.m_height = h;
+		atlas.m_textures.emplace("block/" + texture_name.stem().u8string(), texture);
+
+		row_off += atlas.m_entry_width;
 	}
 }
 
@@ -156,9 +165,9 @@ void mdmc::mc_model_element::from_json(rapidjson::Value::Object const& json)
 	if (m_to.y - m_from.y == 0) m_to.y = m_from.y + 0.01f;
 	if (m_to.z - m_from.z == 0) m_to.z = m_from.z + 0.01f;
 
-	if (m_to != old_to) {
-		std::cerr << "The block was < 3D. Add a non-null value to make it an OBB." << std::endl;
-	}
+	//if (m_to != old_to) {
+	//	std::cerr << "The block was < 3D. Add a non-null value to make it an OBB." << std::endl;
+	//}
 
 	if (json.HasMember("rotation"))
 	{
@@ -223,7 +232,7 @@ void mdmc::mc_model::from_json(rapidjson::Value::Object const& json)
 	}
 }
 
-void load_models(zip* mc_jar, std::map<std::string, mdmc::mc_model>& models)
+void load_models(zip* mc_jar, std::function<void(std::string const& name, mdmc::mc_model& model)> callback)
 {
 	zip_stat_t st{};
 
@@ -255,7 +264,7 @@ void load_models(zip* mc_jar, std::map<std::string, mdmc::mc_model>& models)
 
 			mdmc::mc_model model{};
 			model.from_json(document.GetObject());
-			models.emplace("block/" + filename.stem().u8string(), model);
+			callback("block/" + filename.stem().u8string(), model);
 		}
 	}
 }
@@ -324,16 +333,28 @@ void mdmc::mc_assets::from_jar(zip* mc_jar, std::string const& mc_version)
 
 	generate_mc_block_textures_atlas(mc_jar, m_atlas);
 
-	load_models(mc_jar, m_model_by_name);
+	load_models(mc_jar, [this](std::string const& name, mdmc::mc_model& model) {
+		m_model_by_name.emplace(name, model);
+		//std::cout << "Model: " << name << std::endl;
+	});
 
 	load_block_states(mc_jar, [this](std::string const& name, mdmc::mc_block_state& block_state) {
 		m_block_state_by_name.emplace(name, block_state);
 
 		for (auto const& [variant_name, _] : block_state.m_variant_by_name) {
 			std::string full_variant_name = name + (variant_name.empty() ? "" : ("[" + variant_name + "]"));
-			m_block_state_variant_by_name.emplace(full_variant_name, std::ref(m_block_state_by_name[name].m_variant_by_name[variant_name]));
+
+			mdmc::mc_block_state_variant& variant = m_block_state_by_name[name].m_variant_by_name[variant_name];
+			m_block_state_variant_by_id.emplace_back(full_variant_name, std::ref(variant));
 		}
 	});
 
-	std::cout << "finished" << std::endl;
+	//
+	struct {
+		using entry_t = std::pair<std::string, std::reference_wrapper<mdmc::mc_block_state_variant>>;
+		bool operator()(entry_t& a, entry_t& b) {
+			return a.first < b.first;
+		}
+	} sort_func;
+	std::sort(m_block_state_variant_by_id.begin(), m_block_state_variant_by_id.end(), sort_func);
 }

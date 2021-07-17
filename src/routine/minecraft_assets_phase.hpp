@@ -12,6 +12,7 @@
 
 #include "mc/mc_assets.hpp"
 #include "mc/mc_blocks_voxelizer.hpp"
+#include "mc/mc_renderer.hpp"
 
 #include "octree/octree.hpp"
 #include "octree/octree_builder.hpp"
@@ -45,17 +46,21 @@ private:
 	std::string m_version = "1.15.2";
 
 	mdmc::mc_blocks_voxelizer m_mc_blocks_voxelizer;
+	mdmc::mc_renderer m_mc_renderer;
 
+	std::unique_ptr<mdmc::mc_baked_world> m_mc_baked_world;
 	std::shared_ptr<mdmc::mc_assets> m_mc_assets;
 	std::shared_ptr<mdmc::baked_mc_blocks> m_baked_mc_blocks;
 
 	//std::vector<std::pair<std::string, MinecraftBlockStateVariant const*>> block_by_id;
-	int current_block_id = 0;
-	void shift_block_id(bool forward);
+	int m_current_block_id = 0;
+
+	void set_current_block_id(int block_id);
+	void move_block_id(bool forward);
 
 	double last_block_change_time = 0;
 
-	FixedTargetCamera camera;
+	FixedTargetCamera m_camera;
 	void test_camera_input(GLFWwindow* window, float delta);
 	void test_block_sliding_input(GLFWwindow* window, float delta);
 

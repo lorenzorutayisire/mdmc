@@ -2,7 +2,7 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
-void mdmc::bake_mc_atlas(GLuint& texture, mdmc::mc_atlas const& atlas)
+void mdmc::bake_mc_atlas(GLuint texture, mdmc::mc_atlas const& atlas)
 {
 	glBindTexture(GL_TEXTURE_2D, texture);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (int) atlas.width(), (int) atlas.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, atlas.m_data.data());
@@ -79,8 +79,8 @@ size_t bake_mc_model_element_face(
 
 		// Tile
 		mdmc::mc_atlas::texture texture = face.get_texture(assets, texture_by_variable);
-		buffer.push_back(texture.u());
-		buffer.push_back(texture.v());
+		buffer.push_back((float) texture.m_x);
+		buffer.push_back((float) texture.m_y);
 
 		// UV
 		unsigned int uv_vertex = (v_idx + face.m_rotation / 90) % 4;
@@ -191,4 +191,36 @@ size_t mdmc::bake_mc_block_state_variant(
 	mdmc::mc_model const& model = assets.m_model_by_name.at(block_state_variant.m_model);
 	size_t v_count = bake_mc_model(assets, model, transform, buffer);
 	return v_count;
+}
+
+void mdmc::define_block_vertex_layout(GLuint vao)
+{
+	glBindVertexArray(vao);
+
+	GLuint loc;
+	size_t shift = 0;
+
+	// Position
+	loc = 0;
+	glEnableVertexAttribArray(loc);
+	glVertexAttribPointer(loc, 3, GL_FLOAT, GL_FALSE, MDMC_VERTEX_SIZE * sizeof(GLfloat), (void*) shift);
+	shift += 3 * sizeof(GLfloat);
+
+	// Tile
+	loc = 1;
+	glEnableVertexAttribArray(loc);
+	glVertexAttribPointer(loc, 2, GL_FLOAT, GL_FALSE, MDMC_VERTEX_SIZE * sizeof(GLfloat), (void*) shift);
+	shift += 2 * sizeof(GLfloat);
+
+	// Uv
+	loc = 2;
+	glEnableVertexAttribArray(loc);
+	glVertexAttribPointer(loc, 2, GL_FLOAT, GL_FALSE, MDMC_VERTEX_SIZE * sizeof(GLfloat), (void*) shift);
+	shift += 2 * sizeof(GLfloat);
+
+	// Tint color
+	loc = 3;
+	glEnableVertexAttribArray(loc);
+	glVertexAttribPointer(loc, 1, GL_FLOAT, GL_FALSE, MDMC_VERTEX_SIZE * sizeof(GLfloat), (void*) shift);
+	//shift += 1 * sizeof(GLfloat);
 }

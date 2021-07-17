@@ -6,11 +6,12 @@
 #include <chrono>
 #include <iostream>
 
+#include "util/render_doc.hpp"
+
 #include <imgui.h>
 #include <zip.h>
 
 #include <glm/gtx/transform.hpp>
-
 
 #ifdef WIN32
 	#include <shlobj_core.h>
@@ -31,14 +32,14 @@ glm::mat4 get_projection()
 }
 
 MinecraftAssetsPhase::MinecraftAssetsPhase() :
-	camera(glm::vec3(8, 8, 8))
+	m_camera(glm::vec3(8, 8, 8))
 {}
 
 std::shared_ptr<Octree> MinecraftAssetsPhase::voxelize(unsigned int resolution)
 {
 	uint32_t volume_side = glm::exp2(resolution);
 
-	auto& block = m_baked_mc_blocks->m_blocks.at(current_block_id);
+	auto& block = m_baked_mc_blocks->m_blocks.at(m_current_block_id);
 
 	std::cout << "Voxelization process started..." << std::endl;
 	std::cout << "Vertices pool: ["  << block.m_start_at << "," << block.m_count << "]" << std::endl;
@@ -104,7 +105,7 @@ void MinecraftAssetsPhase::test_camera_input(GLFWwindow* window, float delta)
 
 		if (capture_cursor)
 		{
-			this->camera.offset_rotation(glm::vec2(
+			this->m_camera.offset_rotation(glm::vec2(
 				(cursor_x - last_cursor_x) * sensitivity * delta,
 				(cursor_y - last_cursor_y) * sensitivity * delta
 			));
@@ -131,10 +132,10 @@ void MinecraftAssetsPhase::test_camera_input(GLFWwindow* window, float delta)
 
 	// Zoom
 	if (glfwGetKey(window, GLFW_KEY_W))
-		this->camera.offset_zoom(-0.1f);
+		this->m_camera.offset_zoom(-0.1f);
 
 	if (glfwGetKey(window, GLFW_KEY_S))
-		this->camera.offset_zoom(0.1f);
+		this->m_camera.offset_zoom(0.1f);
 }
 
 /*
@@ -152,11 +153,7 @@ void MinecraftAssetsPhase::test_block_sliding_input(GLFWwindow* window, float de
 		double current_time = glfwGetTime();
 		if (current_time - this->last_block_change_time >= delay)
 		{
-			this->shift_block_id(right_key);
-			
-			auto size = m_mc_assets->m_block_state_variant_by_name.size();
-			if (this->current_block_id < 0) this->current_block_id = 0;
-			if (this->current_block_id >= size) this->current_block_id = size - 1;
+			move_block_id(right_key);
 
 			delay /= 1.2; // If kept pressed, the scroll becomes faster.
 			this->last_block_change_time = glfwGetTime();
@@ -169,14 +166,19 @@ void MinecraftAssetsPhase::test_block_sliding_input(GLFWwindow* window, float de
 	}
 }
 
-/*
-	Shifts the current Minecraft block ID.
-*/
-void MinecraftAssetsPhase::shift_block_id(bool forward)
+void MinecraftAssetsPhase::set_current_block_id(int block_id)
 {
-	this->current_block_id += forward ? 1 : -1;
+	m_current_block_id = glm::clamp<int>(block_id, 0, (int) m_mc_assets->m_block_state_variant_by_id.size());
 	this->view_block_octree = false;
 	this->octree = nullptr;
+
+	m_mc_baked_world->set_block(glm::ivec3(0, 0, 0), m_current_block_id);
+	m_mc_baked_world->rebuild();
+}
+
+void MinecraftAssetsPhase::move_block_id(bool forward)
+{
+	set_current_block_id(m_current_block_id + (forward ? 1 : -1));
 }
 
 void MinecraftAssetsPhase::update(Stage& stage, float delta)
@@ -227,6 +229,9 @@ void MinecraftAssetsPhase::setup(std::string const& mc_version)
 
 	m_mc_assets = std::make_shared<mdmc::mc_assets>();
 	m_mc_assets->from_jar(mc_jar, mc_version);
+
+	m_mc_baked_world = std::make_unique<mdmc::mc_baked_world>(m_mc_assets);
+	set_current_block_id(0);
 
 	// Baking
 	std::cout << "Baking assets for voxelization & debug rendering..." << std::endl;
@@ -310,14 +315,10 @@ void MinecraftAssetsPhase::ui_block_info(unsigned int& y)
 		ImGuiWindowFlags_NoNavFocus
 	))
 	{
-		auto block_id = this->current_block_id;
+		auto& block_state_variant = m_mc_assets->m_block_state_variant_by_id.at(m_current_block_id);
 
-		auto iterator = m_mc_assets->m_block_state_variant_by_name.begin();
-		std::advance(iterator, block_id);
-		auto block_name = iterator->first;
-
-		ImGui::Text("ID: %d/%llu", block_id + 1, m_mc_assets->m_block_state_variant_by_name.size());
-		ImGui::Text("Name: %s", block_name.c_str());
+		ImGui::Text("ID: %d/%llu", m_current_block_id + 1, m_mc_assets->m_block_state_variant_by_id.size());
+		ImGui::Text("Name: %s", block_state_variant.first.c_str());
 
 		//ImGui::TextColored(ImVec4(1, 1, 1, 0.7), "Use < > to slide among the loaded blocks.");
 
@@ -333,12 +334,12 @@ void MinecraftAssetsPhase::ui_camera_info(unsigned int& y)
 
 	if (ImGui::Begin("Camera", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse))
 	{
-		auto position = this->camera.get_position();
-		auto rotation = this->camera.get_rotation();
+		auto position = this->m_camera.get_position();
+		auto rotation = this->m_camera.get_rotation();
 
 		ImGui::Text("Position: x=%.2f y=%.2f z=%.2f", position.x, position.y, position.z);
 		ImGui::Text("Rotation: x=%.2f y=%.2f", rotation.x, rotation.y);
-		ImGui::Text("Zoom: %.2f", this->camera.get_zoom());
+		ImGui::Text("Zoom: %.2f", this->m_camera.get_zoom());
 
 		ImGui::End();
 	}
@@ -388,8 +389,8 @@ void MinecraftAssetsPhase::ui_main()
 		break;
 
 	case State::VIEW:
-		this->ui_block_info(y);
-		this->ui_camera_info(y);
+		ui_block_info(y);
+		ui_camera_info(y);
 		break;
 	}
 }
@@ -403,13 +404,10 @@ void MinecraftAssetsPhase::render(Stage& stage)
 
 	if (!this->view_block_octree && this->m_baked_mc_blocks != nullptr)
 	{
-		this->minecraft_renderer.render_block(
-			get_projection() * this->camera.get_matrix(),
-			glm::mat4(1),
-			glm::vec4(0, 1, 0, 1),
-			this->context,
-			this->minecraft_baked_block_pool->get_block(this->current_block_id)
-		);
+		//RenderDoc().capture([this] {
+		glm::mat4 camera = get_projection() * m_camera.get_matrix();
+		m_mc_renderer.render(*m_mc_baked_world, camera, glm::mat4(1));
+		//});
 	}
 	else if (this->view_block_octree && this->octree != nullptr)
 	{
@@ -422,8 +420,8 @@ void MinecraftAssetsPhase::render(Stage& stage)
 			glm::vec3(0), glm::vec3(16),
 
 			get_projection(),
-			this->camera.get_matrix(),
-			this->camera.get_position(),
+			this->m_camera.get_matrix(),
+			this->m_camera.get_position(),
 			this->octree
 		);
 	}

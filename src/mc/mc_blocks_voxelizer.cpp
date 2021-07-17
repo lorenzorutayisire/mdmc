@@ -12,7 +12,6 @@ mdmc::baked_mc_blocks::baked_mc_blocks()
 {
 	glGenTextures(1, &m_atlas_texture);
 
-	glGenVertexArrays(1, &m_vao);
 	glGenBuffers(1, &m_vbo);
 }
 
@@ -20,7 +19,6 @@ mdmc::baked_mc_blocks::~baked_mc_blocks()
 {
 	glDeleteTextures(1, &m_atlas_texture);
 
-	glDeleteVertexArrays(1, &m_vao);
 	glDeleteBuffers(1, &m_vbo);
 }
 
@@ -31,7 +29,7 @@ void mdmc::baked_mc_blocks::from_mc_assets(mdmc::mc_assets const& assets)
 	std::vector<GLfloat> buffer;
 	size_t start_at = 0;
 
-	for (auto& variant : assets.m_block_state_variant_by_name)
+	for (auto& variant : assets.m_block_state_variant_by_id)
 	{
 		size_t vert_count = mdmc::bake_mc_block_state_variant(assets, variant.second, glm::identity<glm::mat4>(), buffer);
 
@@ -43,40 +41,8 @@ void mdmc::baked_mc_blocks::from_mc_assets(mdmc::mc_assets const& assets)
 		start_at += vert_count;
 	}
 
-	glBindVertexArray(m_vao);
-
 	glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
 	glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr) (buffer.size() * sizeof(GLfloat)), buffer.data(), GL_STATIC_DRAW);
-
-	GLuint loc;
-	size_t shift = 0;
-
-	// Position
-	loc = 0;
-	glEnableVertexAttribArray(loc);
-	glVertexAttribPointer(loc, 3, GL_FLOAT, GL_FALSE, MDMC_VERTEX_SIZE * sizeof(GLfloat), (void*) shift);
-	shift += 3 * sizeof(GLfloat);
-
-	// Tile
-	loc = 1;
-	glEnableVertexAttribArray(loc);
-	glVertexAttribPointer(loc, 2, GL_FLOAT, GL_FALSE, MDMC_VERTEX_SIZE * sizeof(GLfloat), (void*) shift);
-	shift += 2 * sizeof(GLfloat);
-
-	// Uv
-	loc = 2;
-	glEnableVertexAttribArray(loc);
-	glVertexAttribPointer(loc, 2, GL_FLOAT, GL_FALSE, MDMC_VERTEX_SIZE * sizeof(GLfloat), (void*) shift);
-	shift += 2 * sizeof(GLfloat);
-
-	// Tint
-	loc = 3;
-	glEnableVertexAttribArray(loc);
-	glVertexAttribPointer(loc, 1, GL_FLOAT, GL_FALSE, MDMC_VERTEX_SIZE * sizeof(GLfloat), (void*) shift);
-	shift += 1 * sizeof(GLfloat);
-
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindVertexArray(0);
 }
 
 // ------------------------------------------------------------------------------------------------ mc_blocks_voxelizer

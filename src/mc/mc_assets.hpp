@@ -12,25 +12,15 @@
 
 namespace mdmc
 {
-	class mc_assets;
+	struct mc_assets;
 	struct mc_model_element;
 
 	struct mc_atlas
 	{
 		struct texture
 		{
-			int m_x;
-			int m_y;
-			int m_width;
-			int m_height;
-
-			inline float u() const {
-				return m_x / (float) m_width;
-			}
-
-			inline float v() const {
-				return m_y / (float) m_height;
-			}
+			size_t m_x, m_y;
+			size_t m_width, m_height;
 		};
 
 		size_t m_entry_width;
@@ -126,7 +116,7 @@ namespace mdmc
 		mdmc::mc_atlas m_atlas;
 		std::map<std::string, mdmc::mc_model> m_model_by_name;
 		std::map<std::string, mdmc::mc_block_state> m_block_state_by_name;
-		std::map<std::string, std::reference_wrapper<mdmc::mc_block_state_variant>> m_block_state_variant_by_name;
+		std::vector<std::pair<std::string, std::reference_wrapper<mdmc::mc_block_state_variant>>> m_block_state_variant_by_id;
 
 		void from_jar(zip* mc_jar, std::string const& mc_version);
 	};

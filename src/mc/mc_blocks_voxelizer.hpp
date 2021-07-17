@@ -23,7 +23,6 @@ namespace mdmc
 
 		GLuint m_atlas_texture;
 		GLuint m_vbo;
-		GLuint m_vao; // Used for debug drawing
 
 		std::vector<baked_block> m_blocks;
 
